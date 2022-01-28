@@ -38,7 +38,7 @@ if __name__ == '__main__':
     Change the config_path to read the desired file
     """
     # CONFIG
-    config_path = "C:/workspace3/bluesky_USEPE/nommon/city_model/settings.cfg"
+    config_path = "./settings.cfg"
     config = configparser.ConfigParser()
     config.read( config_path )
 
