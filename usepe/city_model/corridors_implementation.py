@@ -205,7 +205,7 @@ def getCorridorCoordinates( corridor, file_path ):
     _, file_extension = os.path.splitext( file_path )
     if file_extension == ".csv":
         with open( file_path, 'r' ) as csv_file:
-            reader = csv.DictReader( csv_file )
+            reader = csv.DictReader( csv_file, delimiter=';' )
             rows = []
             corridor_row = []
             for row in reader:
