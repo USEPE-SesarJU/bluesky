@@ -4,6 +4,7 @@
 A module responsible for strategic deconfliction
 """
 from operator import add
+from pickle import FALSE
 import datetime
 import math
 
@@ -159,6 +160,67 @@ def droneAirspaceUsage( G, route, time, users_planned, initial_time, final_time,
 
     return users
 
+def droneAirspaceUsageDelivery( G, route, time, users_planned, initial_time, final_time,
+                                route_parameters, ac, hovering_time ):
+    """
+    Computes how the new user populates the segments. It returns the information of how the segments
+    are populated including the tentative flight plan of the new drone.
+
+    Args:
+            G (graph): a graph representing the city
+            route (list): list containing the waypoints of the optimal route
+            time (int): integer representing the departure time in seconds relative to initial_time
+            users (dictionary): information of how the segments are populated from t0 to tf
+            initial_time (int): integer representing the initial time in seconds of the period under
+                study
+            final_time (int): integer representing the final time in seconds of the period under
+                study
+            route_parameters (dictionary): dictionary with all the information about the route
+            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max, safety_volume_size}
+
+    Returns:
+            users (dictionary): information of how the segments are populated from t0 to tf
+                including the tentative flight plan of the new drone
+    """
+    users = users_planned.copy()
+    actual_segment = None
+    actual_time = time
+    t0 = time
+    step = 0
+    for wpt2 in route:
+        if not actual_segment:
+            actual_segment = G.nodes[wpt2]['segment']
+            step += 1
+            continue
+
+        if G.nodes[wpt2]['segment'] == actual_segment:
+            actual_time += calcTravelTime( route_parameters, ac, step )
+
+            if wpt2 == route[-1]:
+                tf = math.floor( actual_time )
+                segment_list = [1 * ac['safety_volume_size'] if ( i >= t0 ) & ( i < tf ) else 0 for i in range( final_time - initial_time )]
+                users[actual_segment] = list( map( add, users[actual_segment], segment_list ) )
+        else:
+            actual_time += calcTravelTime( route_parameters, ac, step )
+            tf = math.floor( actual_time )
+            segment_list = [1 * ac['safety_volume_size'] if ( i >= t0 ) & ( i < tf ) else 0 for i in range( final_time - initial_time )]
+
+            users[actual_segment] = list( map( add, users[actual_segment], segment_list ) )
+
+            t0 = math.floor( actual_time )
+            actual_segment = G.nodes[wpt2]['segment']
+
+        if wpt2 == route[-1]:
+            segment_list = [1 * ac['safety_volume_size'] if ( i >= tf ) & ( i < tf + hovering_time ) else 0 for i in range( final_time - initial_time )]
+            users[actual_segment] = list( map( add, users[actual_segment], segment_list ) )
+
+        step += 1
+
+    if tf > final_time:
+        print( 'Warning! Drone ends its trajectory at {0}, but the simulation ends at {1}'.format( tf, final_time ) )
+
+    return users, tf + hovering_time
+
 
 def checkOverpopulatedSegment( segments, users, initial_time, final_time ):
     """
@@ -199,7 +261,7 @@ def checkOverpopulatedSegment( segments, users, initial_time, final_time ):
 
 
 def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_time, segments,
-                              config, ac, only_rerouting=False ):
+                              config, ac, only_rerouting=False, delivery=False, hovering_time=30 ):
     """
     Computes an optimal flight plan without exceeding the segment capacity limit. The procedure
     consist in:
@@ -235,6 +297,7 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
                 desired departure time
 
     """
+
     delayed_time = time
     opt_travel_time, route = trajectoryCalculation( G, orig, dest )
 
@@ -281,7 +344,65 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
             overpopulated_segment, overpopulated_time = checkOverpopulatedSegment( 
                 segments_step, users_step, initial_time, final_time )
 
+    if delivery:
+        users_step, departure2 = droneAirspaceUsageDelivery( G, route, delayed_time, users,
+                                                             initial_time, final_time,
+                                                             route_parameters, ac, hovering_time )
+        return users_step, route, delayed_time, departure2
+
     return users_step, route, delayed_time
+
+
+def deconflictedDeliveryPathPlanning( orig1, dest1, orig2, dest2, time, G, users, initial_time,
+                                      final_time, segments, config, ac, hovering_time=30,
+                                      only_rerouting=False ):
+    """
+    Computes an optimal flight plan without exceeding the segment capacity limit. The procedure
+    consist in:
+    1. Compute optimal path from origin to destination.
+    2. While including the new drone a segment capacity limit is exceeded:
+        2.1. A sub-optimal trajectory is computed without considering the overpopulated segment.
+        2.2. If the travel time of the sub-optimal trajectory divided by the optimal travel time is
+            higher than a configurable threshold:
+            2.2.1. The flight is delayed by a configurable value.
+            2.2.2. Repeat step 2 with the new departure time.
+    3. It returns the flight plan, the departure time and the new information about how the segments
+        are populated
+    Args:
+            orig (list): with the coordinates of the origin point [longitude, latitude]
+            dest (list): with the coordinates of the destination point [longitude, latitude]
+            time (int): integer representing the departure time in seconds relative to initial_time
+            G (graph): a graph representing the city
+            users (dictionary): information of how the segments are populated from initial time to
+                final time.
+            initial_time (int): integer representing the initial time in seconds of the period under
+                study
+            final_time (int): integer representing the final time in seconds of the period under
+                study
+            segments (dictionary): dictionary with the segment information
+
+            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max}
+
+    Returns:
+            users_step (dictionary): information of how the segments are populated from initial time to
+                final time including the deconflcited trajectory of the new dorne.
+            route (list): list containing the waypoints of the optimal route
+            delayed_time (int): indicating how many seconds the flight is delayed respect to the
+                desired departure time
+
+    """
+
+    users1, route1, delayed_time1, departure2 = deconflictedPathPlanning( orig1, dest1, time, G, users,
+                                                           initial_time, final_time, segments,
+                                                           config, ac, only_rerouting=only_rerouting,
+                                                           delivery=True,
+                                                           hovering_time=hovering_time )
+
+    users2, route2, delayed_time2 = deconflictedPathPlanning( orig2, dest2, departure2, G, users1,
+                                                              initial_time, final_time, segments,
+                                                              config, ac, only_rerouting=True )
+
+    return users2, [route1, route2], delayed_time1
 
 
 def deconflcitedScenario( orig, dest, ac, departure_time, G, users, initial_time, final_time,
