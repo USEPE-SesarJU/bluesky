@@ -934,7 +934,7 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
         new_line4 = '{0} > {1} AT {2} DO {3} ATSPD 0, DELAY {4} DEL {5}'.format( 
             departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time ), ac['id'] )
         new_line5 = '{0} > {1} AT {2} DO {3} ATSPD 0, DELAY {4} PCALL {5} REL '.format( 
-            departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time + 3 ), return_path_rel )
+            departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time + 3 ), '.' + return_path[10:] )
 
         scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' + \
                              new_line3 + '\n' + new_line4 + '\n' + new_line5 + '\n' )
@@ -947,7 +947,7 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
             departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time ), ac['id'],
             layers_dict[route1[-1][0]] * m2ft )
         new_line2 = '{0} > {1} AT {2} DO {3} ATALT {6}, DELAY {4} PCALL {5} REL'.format( 
-            departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time + 3 ), return_path_rel,
+            departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time + 3 ), '.' + return_path[10:],
             layers_dict[route1[-1][0]] * m2ft )
 
         scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' )

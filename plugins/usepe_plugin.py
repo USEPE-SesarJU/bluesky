@@ -9,8 +9,8 @@ import pickle
 
 from bluesky import core, traf, stack, sim  # , settings, navdb,  scr, tools
 from usepe.city_model.dynamic_segments import dynamicSegments
-from usepe.city_model.scenario_definition import createFlightPlan
-from usepe.city_model.strategic_deconfliction import initialPopulation, deconflictedPathPlanning
+from usepe.city_model.scenario_definition import createFlightPlan, createDeliveryFlightPlan
+from usepe.city_model.strategic_deconfliction import initialPopulation, deconflictedPathPlanning, deconflictedDeliveryPathPlanning
 from usepe.city_model.utils import read_my_graphml, layersDict
 import pandas as pd
 
@@ -40,24 +40,37 @@ def init_plugin():
     global usepestrategic
     global usepedronecommands
 
+    # ---------------------------------- DEFINED BY USER ------------------------------------
     config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\settings_exercise_1_reference.cfg"
+    # ------------------------------------------------------------------------------------------
 
-    # TODO: Include these parameters in the config file
-    graph_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\testing_graph.graphml"
-    segment_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\offline_segments.pkl"
-    fligh_plan_csv_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\delivery_testing.csv"
-
-    initial_time = 0  # seconds
-    final_time = 7200  # seconds
+    # graph_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\testing_graph.graphml"
+    # segment_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\offline_segments.pkl"
+    # flight_plan_csv_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\delivery_testing.csv"
+    #
+    # initial_time = 0  # seconds
+    # final_time = 7200  # seconds
 
     usepeconfig = configparser.ConfigParser()
     usepeconfig.read( config_path )
 
+    graph_path = usepeconfig['BlueSky']['graph_path']
+    segment_path = usepeconfig['BlueSky']['segment_path']
+    flight_plan_csv_path = usepeconfig['BlueSky']['flight_plan_csv_path']
+
+    initial_time = int( usepeconfig['BlueSky']['initial_time'] )
+    final_time = int( usepeconfig['BlueSky']['final_time'] )
+
     usepegraph = UsepeGraph( graph_path )
     usepesegments = UsepeSegments( segment_path )
     usepestrategic = UsepeStrategicDeconfliction( initial_time, final_time )
-    usepeflightplans = UsepeFlightPlan( fligh_plan_csv_path )
+    usepeflightplans = UsepeFlightPlan( flight_plan_csv_path )
     usepedronecommands = UsepeDroneCommands()
+
+    # Activate the detection and resolution method, and logger
+    configuration_path = r".{}".format( usepeconfig['BlueSky']['configuration_path'] )
+    stack.stack( 'PCALL {} REL'.format( configuration_path ) )
+    stack.stack( 'OP' )
 
     # Configuration parameters
     config = {
@@ -79,6 +92,10 @@ def init_plugin():
 
 
 def update():
+    if sim.simt > usepeconfig.getint( 'BlueSky', 'final_time' ):
+        stack.stack( 'RESET' )
+        stack.stack( 'QUIT' )
+
     usepegraph.update()
     usepesegments.update()
     usepestrategic.update()
@@ -115,7 +132,6 @@ class UsepeGraph( core.Entity ):
 
         self.graph = graph_path
         self.graph = read_my_graphml( graph_path )
-        self.test = 1
         self.layers_dict = layersDict( usepeconfig )
 
     def update( self ):  # Not used
@@ -158,6 +174,9 @@ class UsepeSegments( core.Entity ):
         TODO. Here we have to include the function which updates the segments
         """
         updated = False
+        if not usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
+            return updated, self.segments
+
         if ( sim.simt > 30 ) & ( sim.simt < 32 ):
             updated = True
         segments = self.segments
@@ -283,15 +302,32 @@ class UsepeStrategicDeconfliction( core.Entity ):
             v_max = 18
             vs_max = 5
             safety_volume_size = 1
+        elif row['drone'] == 'Amzn':
+            v_max = 44
+            vs_max = 8
+            safety_volume_size = 1
+        elif row['drone'] == 'W178':
+            v_max = 41
+            vs_max = 6
+            safety_volume_size = 1
 
         ac = {'id': name, 'type': row['drone'], 'accel': 3.5, 'v_max': v_max, 'vs_max': vs_max,
-              'safety_volume_size': safety_volume_size }
+              'safety_volume_size': safety_volume_size, 'purpose': row['purpose']}
 
-        users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
-                                                               usepegraph.graph, self.users,
-                                                               self.initial_time, self.final_time,
-                                                               copy.deepcopy( usepesegments.segments ),
-                                                               usepeconfig, ac )
+        if ac['purpose'] == 'delivery':
+            users, route, delayed_time = deconflictedDeliveryPathPlanning( orig, dest, dest, orig,
+                                                                           departure_time, usepegraph.graph,
+                                                                           self.users, self.initial_time,
+                                                                           self.final_time,
+                                                                           copy.deepcopy( usepesegments.segments ),
+                                                                           usepeconfig, ac, hovering_time=30,
+                                                                           only_rerouting=False )
+        else:
+            users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
+                                                                   usepegraph.graph, self.users,
+                                                                   self.initial_time, self.final_time,
+                                                                   copy.deepcopy( usepesegments.segments ),
+                                                                   usepeconfig, ac )
 
         df_row['delayed_time'] = delayed_time
         usepeflightplans.route_dict[name] = route
@@ -319,11 +355,29 @@ class UsepeStrategicDeconfliction( core.Entity ):
 
         ac = usepeflightplans.ac_dict[name]
 
-        users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
-                                                               usepegraph.graph, self.users,
-                                                               self.initial_time, self.final_time,
-                                                               copy.deepcopy( usepesegments.segments ), usepeconfig,
-                                                               ac, only_rerouting=True )
+        if ac['purpose'] == 'delivery':
+
+            mask = usepeflightplans.flight_plan_df_back_up['ac'] == acid
+
+            latf2 = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['origin_lat']
+            lonf2 = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['origin_lon']
+            altf2 = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['origin_alt']
+
+            dest2 = [lonf2, latf2, altf2 ]
+
+            users, route, delayed_time = deconflictedDeliveryPathPlanning( orig, dest, dest, dest2,
+                                                                           departure_time, usepegraph.graph,
+                                                                           self.users, self.initial_time,
+                                                                           self.final_time,
+                                                                           copy.deepcopy( usepesegments.segments ),
+                                                                           usepeconfig, ac, hovering_time=30,
+                                                                           only_rerouting=True )
+        else:
+            users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
+                                                                   usepegraph.graph, self.users,
+                                                                   self.initial_time, self.final_time,
+                                                                   copy.deepcopy( usepesegments.segments ), usepeconfig,
+                                                                   ac, only_rerouting=True )
 
         usepeflightplans.route_dict[name] = route
 
@@ -378,10 +432,13 @@ class UsepeDroneCommands( core.Entity ):
         layers_dict = usepegraph.layers_dict
 
         scenario_path = r'.\scenario\usepe\temp\scenario_traffic_drone_{}.scn'.format( ac['id'] )
-        print( scenario_path )
         scenario_file = open( scenario_path, 'w' )
 
-        createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
+        if ac['purpose'] == 'delivery':
+            createDeliveryFlightPlan( route[0], route[1], ac, departure_time, G, layers_dict,
+                                      scenario_file, scenario_path, hovering_time=30 )
+        else:
+            createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
 
         scenario_file.close()
 
@@ -402,7 +459,11 @@ class UsepeDroneCommands( core.Entity ):
 
         scenario_file = open( scenario_path, 'w' )
 
-        createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
+        if ac['purpose'] == 'delivery':
+            createDeliveryFlightPlan( route[0], route[1], ac, departure_time, G, layers_dict,
+                                      scenario_file, scenario_path, hovering_time=30 )
+        else:
+            createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
 
         scenario_file.close()
 
