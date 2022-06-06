@@ -1,5 +1,7 @@
 """ This plugin load the graph for the USEPE project. """
 # Import the global bluesky objects. Uncomment the ones you need
+from os import listdir
+from os.path import join
 import configparser
 import copy
 import datetime
@@ -8,10 +10,15 @@ import os
 import pickle
 
 from bluesky import core, traf, stack, sim  # , settings, navdb,  scr, tools
+from bluesky.tools import geo
+from bluesky.tools.aero import nm
+from bluesky.traffic.asas.detection import ConflictDetection
+from bluesky.traffic.asas.statebased import StateBased
 from usepe.city_model.dynamic_segments import dynamicSegments
 from usepe.city_model.scenario_definition import createFlightPlan, createDeliveryFlightPlan
 from usepe.city_model.strategic_deconfliction import initialPopulation, deconflictedPathPlanning, deconflictedDeliveryPathPlanning
 from usepe.city_model.utils import read_my_graphml, layersDict
+import numpy as np
 import pandas as pd
 
 
@@ -199,6 +206,7 @@ class UsepeSegments( core.Entity ):
             # 2nd: to initialised the population of segments
             usepestrategic.initialisedUsers()
 
+            segments_df = pd.DataFrame.from_dict( self.segments, orient='index' )
             # 3rd. To update the drones that are already flying
             for acid in traf.id:
                 print( acid )
@@ -221,6 +229,31 @@ class UsepeSegments( core.Entity ):
 
                 orig = [lon0, lat0, alt0 ]
                 dest = [lonf, latf, altf ]
+
+                # We check which is the origin is in a no fly zone
+                cond = ( segments_df['lon_min'] <= lon0 ) & ( segments_df['lon_max'] > lon0 ) & \
+                    ( segments_df['lat_min'] <= lat0 ) & ( segments_df['lat_max'] > lat0 ) & \
+                    ( segments_df['z_min'] <= alt0 ) & ( segments_df['z_max'] > alt0 )
+
+                if segments_df[cond].empty:
+                    segment_name_0 = 'N/A'
+                else:
+                    segment_name_0 = segments_df[cond].index[0]
+
+                # We check which is the destination is in a no fly zone
+                cond = ( segments_df['lon_min'] <= lonf ) & ( segments_df['lon_max'] > lonf ) & \
+                    ( segments_df['lat_min'] <= latf ) & ( segments_df['lat_max'] > latf ) & \
+                    ( segments_df['z_min'] <= altf ) & ( segments_df['z_max'] > altf )
+
+                if segments_df[cond].empty:
+                    segment_name_f = 'N/A'
+                else:
+                    segment_name_f = segments_df[cond].index[0]
+
+                if ( self.segments[segment_name_0]['speed'] == 0 ) | ( self.segments[segment_name_f]['speed'] == 0 ):
+                    # origin or destination is not allowed, so the drone lands
+                    usepedronecommands.droneLanding( acid )
+                    continue
 
                 usepestrategic.updateStrategicDeconflictionDrone( acid, orig, dest )
 
@@ -482,6 +515,11 @@ class UsepeDroneCommands( core.Entity ):
             usepeflightplans.flight_plan_df_processed = usepeflightplans.flight_plan_df_processed.drop( usepeflightplans.flight_plan_df_processed.index[0] )
             usepeflightplans.flight_plan_df_back_up = pd.concat( [usepeflightplans.flight_plan_df_back_up, df_row] )
 
+    def droneLanding( self, acid ):
+        stack.stack( 'SPD {} 0'.format( acid ) )
+        stack.stack( '{} ATSPD 0 {} ALT 0'.format( acid, acid ) )
+        stack.stack( '{} ATALT 0 DEL {}'.format( acid, acid ) )
+
     def update( self ):  # Not used
         return
 
@@ -554,3 +592,221 @@ class UsepeFlightPlan( core.Entity ):
 
     def reset( self ):  # Not used
         return
+
+
+class StateBasedUsepe( ConflictDetection ):
+    def __init__( self ):
+        super().__init__()
+
+        self.confpairs_default = list()
+
+        # read look-up tables
+        lookup_tables_dir = usepeconfig['BlueSky']['lookup_tables_dir']
+        self.tables = self.readAllLookUpTables( lookup_tables_dir )
+
+        self.table_grid = 25
+        self.time_to_react_min = 5
+        self.table_gs_list = [6, 12, 18, 24, 44]
+
+    def readLookUpTable( self, path ):
+        columns = ['x', 'y', 'WCV', 'course', 'min_dist', 'v_ow', 'min_dist_v', 'min_dist_h',
+                   'alt', 'v_in', 'time', 'prob', 'pitch']
+        df = pd.read_csv( path, names=columns, sep=' ' )
+        return df
+
+    def readAllLookUpTables( self, lookup_tables_dir ):
+        tables = {}
+        for file in listdir( lookup_tables_dir ):
+            path = join( lookup_tables_dir, file )
+            df = self.readLookUpTable( path )
+            tables[file[6:-4]] = df
+        return tables
+
+    def checkTable( self, table, x, y, course ):
+        if table.empty:
+            return [0]
+
+        df = table[( table['x'] == x ) &
+                   ( table['y'] == y ) &
+                   ( table['course'] == course ) ].sort_values( by=['time'] )
+        time_to_react = list( df['time'] )
+        return time_to_react
+
+    def selectTable( self, drone, manoeuvre, gs ):
+        if drone == 'AMZN':
+            drone_code = 'A'
+        elif drone == 'M600':
+            drone_code = 'D'
+        elif drone == 'W178':
+            drone_code == 'M'
+
+        key = '-'.join( [drone_code, manoeuvre, str( gs )] )
+        if key in self.tables:
+            return self.tables[key]
+        else:
+            print( 'WARNING: The table {} does not exist'.format( key ) )
+            columns = ['x', 'y', 'WCV', 'course', 'min_dist', 'v_ow', 'min_dist_v', 'min_dist_h',
+                       'alt', 'v_in', 'time', 'prob', 'pitch']
+            return pd.DataFrame( columns=columns )
+
+
+    def detect( self, ownship, intruder, rpz, hpz, dtlookahead ):
+        ''' Conflict detection between ownship (traf) and intruder (traf/adsb).'''
+        # Identity matrix of order ntraf: avoid ownship-ownship detected conflicts
+        I = np.eye( ownship.ntraf )
+
+        # Horizontal conflict ------------------------------------------------------
+
+        # qdrlst is for [i,j] qdr from i to j, from perception of ADSB and own coordinates
+        qdr, dist = geo.kwikqdrdist_matrix( np.asmatrix( ownship.lat ), np.asmatrix( ownship.lon ),
+                                    np.asmatrix( intruder.lat ), np.asmatrix( intruder.lon ) )
+
+        # Convert back to array to allow element-wise array multiplications later on
+        # Convert to meters and add large value to own/own pairs
+        qdr = np.asarray( qdr )
+        dist = np.asarray( dist ) * nm + 1e9 * I
+
+        # Calculate horizontal closest point of approach (CPA)
+        qdrrad = np.radians( qdr )
+        dx = dist * np.sin( qdrrad )  # is pos j rel to i
+        dy = dist * np.cos( qdrrad )  # is pos j rel to i
+
+        # Ownship track angle and speed
+        owntrkrad = np.radians( ownship.trk )
+        ownu = ownship.gs * np.sin( owntrkrad ).reshape( ( 1, ownship.ntraf ) )  # m/s
+        ownv = ownship.gs * np.cos( owntrkrad ).reshape( ( 1, ownship.ntraf ) )  # m/s
+
+        # Intruder track angle and speed
+        inttrkrad = np.radians( intruder.trk )
+        intu = intruder.gs * np.sin( inttrkrad ).reshape( ( 1, ownship.ntraf ) )  # m/s
+        intv = intruder.gs * np.cos( inttrkrad ).reshape( ( 1, ownship.ntraf ) )  # m/s
+
+        du = ownu - intu.T  # Speed du[i,j] is perceived eastern speed of i to j
+        dv = ownv - intv.T  # Speed dv[i,j] is perceived northern speed of i to j
+
+        dv2 = du * du + dv * dv
+        dv2 = np.where( np.abs( dv2 ) < 1e-6, 1e-6, dv2 )  # limit lower absolute value
+        vrel = np.sqrt( dv2 )
+
+        tcpa = -( du * dx + dv * dy ) / dv2 + 1e9 * I
+
+        # Calculate distance^2 at CPA (minimum distance^2)
+        dcpa2 = np.abs( dist * dist - tcpa * tcpa * dv2 )
+
+        # Check for horizontal conflict
+        # RPZ can differ per aircraft, get the largest value per aircraft pair
+        rpz = np.asarray( np.maximum( np.asmatrix( rpz ), np.asmatrix( rpz ).transpose() ) )
+        R2 = rpz * rpz
+        swhorconf = dcpa2 < R2  # conflict or not
+
+        # Calculate times of entering and leaving horizontal conflict
+        dxinhor = np.sqrt( np.maximum( 0., R2 - dcpa2 ) )  # half the distance travelled inzide zone
+        dtinhor = dxinhor / vrel
+
+        tinhor = np.where( swhorconf, tcpa - dtinhor, 1e8 )  # Set very large if no conf
+        touthor = np.where( swhorconf, tcpa + dtinhor, -1e8 )  # set very large if no conf
+
+        # Vertical conflict --------------------------------------------------------
+
+        # Vertical crossing of disk (-dh,+dh)
+        dalt = ownship.alt.reshape( ( 1, ownship.ntraf ) ) - \
+            intruder.alt.reshape( ( 1, ownship.ntraf ) ).T + 1e9 * I
+
+        dvs = ownship.vs.reshape( 1, ownship.ntraf ) - \
+            intruder.vs.reshape( 1, ownship.ntraf ).T
+        dvs = np.where( np.abs( dvs ) < 1e-6, 1e-6, dvs )  # prevent division by zero
+
+        # Check for passing through each others zone
+        # hPZ can differ per aircraft, get the largest value per aircraft pair
+        hpz = np.asarray( np.maximum( np.asmatrix( hpz ), np.asmatrix( hpz ).transpose() ) )
+        tcrosshi = ( dalt + hpz ) / -dvs
+        tcrosslo = ( dalt - hpz ) / -dvs
+        tinver = np.minimum( tcrosshi, tcrosslo )
+        toutver = np.maximum( tcrosshi, tcrosslo )
+
+        # Combine vertical and horizontal conflict----------------------------------
+        tinconf = np.maximum( tinver, tinhor )
+        toutconf = np.minimum( toutver, touthor )
+
+        swconfl = np.array( swhorconf * ( tinconf <= toutconf ) * ( toutconf > 0.0 ) *
+                           np.asarray( tinconf < np.asmatrix( dtlookahead ).T ) * ( 1.0 - I ), dtype=np.bool )
+
+        # --------------------------------------------------------------------------
+        # Update conflict lists
+        # --------------------------------------------------------------------------
+        # Ownship conflict flag and max tCPA
+        inconf = np.any( swconfl, 1 )
+        tcpamax = np.max( tcpa * swconfl, 1 )
+
+        # Select conflicting pairs: each a/c gets their own record
+        confpairs = [( ownship.id[i], ownship.id[j] ) for i, j in zip( *np.where( swconfl ) )]
+        swlos = ( dist < rpz ) * ( np.abs( dalt ) < hpz )
+        lospairs = [( ownship.id[i], ownship.id[j] ) for i, j in zip( *np.where( swlos ) )]
+
+        # ------------------------------------------------------------------------------
+        # Look-up tables
+        # ------------------------------------------------------------------------------
+        self.confpairs_default = confpairs
+
+        # print( 'confpairs_default' )
+        # print( self.confpairs_default )
+
+        if usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
+
+            for i in range( len( swconfl ) ):
+                for j in range( len( swconfl[i] ) ):
+                    if swconfl[i][j]:
+                        ow_ = ownship.id[i]
+                        in_ = intruder.id[j]
+
+                        # Calculate relative position
+                        qdr_iter = qdr[i][j]
+                        qdrrad_iter = np.radians( qdr_iter )
+                        dx_iter = dist[i][j] * np.sin( qdrrad_iter )  # is pos j rel to i
+                        dy_iter = dist[i][j] * np.cos( qdrrad_iter )  # is pos j rel to i
+
+                        # Ownship speed
+                        own_gs_iter = ownship.gs[i]  # m/s
+
+                        # Intruder track angle and speed
+                        int_gs_iter = intruder.gs[j]  # m/s
+
+                        # select table
+                        table = self.selectTable( ownship.type[i], 'V', min( self.table_gs_list, key=lambda x:abs( x - own_gs_iter ) ) )
+
+                        dx_grid = [math.floor( dx_iter / self.table_grid ), math.floor( dx_iter / self.table_grid ),
+                                   math.ceil( dx_iter / self.table_grid ), math.ceil( dx_iter / self.table_grid )]
+
+                        dy_grid = [math.floor( dy_iter / self.table_grid ), math.ceil( dy_iter / self.table_grid ),
+                                   math.floor( dy_iter / self.table_grid ), math.ceil( dy_iter / self.table_grid )]
+
+                        time_to_react_list = []
+
+                        for x, y in zip( dx_grid, dy_grid ):
+                            time_to_react_list.extend( self.checkTable( table, x, y, qdr_iter ) )
+
+                        if time_to_react_list:
+                            if min( time_to_react_list ) <= self.time_to_react_min:
+                                pass
+                            else:
+                                swconfl[i][j] = False
+                        else:
+                            swconfl[i][j] = False
+
+                    else:
+                        pass
+
+            # Ownship conflict flag and max tCPA
+            inconf = np.any( swconfl, 1 )
+            tcpamax = np.max( tcpa * swconfl, 1 )
+
+            # Select conflicting pairs: each a/c gets their own record
+            confpairs = [( ownship.id[i], ownship.id[j] ) for i, j in zip( *np.where( swconfl ) )]
+
+        # print( 'confpairs' )
+        # print( confpairs )
+
+        return confpairs, lospairs, inconf, tcpamax, \
+            qdr[swconfl], dist[swconfl], np.sqrt( dcpa2[swconfl] ), \
+                tcpa[swconfl], tinconf[swconfl]
+
