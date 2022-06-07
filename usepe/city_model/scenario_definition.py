@@ -1152,12 +1152,12 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
         departure_time_seconds = planned_time_s + time_submit_flight_plan
 
         addFlightData( orig_lat, orig_lon, None,
-                  dest_lat, dest_lon, None,
-                  departure_time_seconds,
-                  drone_type,
-                  'background',
-                  planned_time_s,
-                  data )
+                       dest_lat, dest_lon, None,
+                       departure_time_seconds,
+                       drone_type,
+                       'background',
+                       planned_time_s,
+                       data )
 
         n += 1
     # return data
@@ -1172,15 +1172,17 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
 
     print( 'Background traffic stored in : {0}'.format( path ) )
 
-def createDeliveryDrone( orig, dest, departure_time, frequency, uncertainty, distributed, simulation_time, data ):  # Add uncertainty / distribute
+
+def createDeliveryDrone( orig, dest, departure_time, frequency,
+                         uncertainty, distributed, simulation_time, data ):  # Add uncertainty / distribute
     ( orig_lat, orig_lon, orig_alt ) = orig
     ( dest_lat, dest_lon, dest_alt ) = dest
 
     # Max time for flight plan
-    time_submit_flight_plan = 10 * 60
+    time_submit_flight_plan = 15 * 60
     # planned_time_s = n * time_spacing
 
-    if frequency != None:
+    if frequency is not None:
         while departure_time < simulation_time:
             departure_time_aux = copy.deepcopy( departure_time )
             if uncertainty:
@@ -1189,12 +1191,12 @@ def createDeliveryDrone( orig, dest, departure_time, frequency, uncertainty, dis
                 departure_time = random.randrange( departure_time, simulation_time )
             # Add one flight to data
             addFlightData( orig_lat, orig_lon, orig_alt,
-                          dest_lat, dest_lon, dest_alt,
-                          departure_time + time_submit_flight_plan,
-                          'M600',
-                          'delivery',
-                          departure_time,
-                          data )
+                           dest_lat, dest_lon, dest_alt,
+                           departure_time + time_submit_flight_plan,
+                           'M600',
+                           'delivery',
+                           departure_time,
+                           data )
 
             departure_time = departure_time_aux
             departure_time += frequency
@@ -1202,12 +1204,13 @@ def createDeliveryDrone( orig, dest, departure_time, frequency, uncertainty, dis
     else:
         # Add one flight to data
         addFlightData( orig_lat, orig_lon, orig_alt,
-                      dest_lat, dest_lon, dest_alt,
-                      departure_time + time_submit_flight_plan,
-                      'M600',
-                      'delivery',
-                      departure_time,
-                      data )
+                       dest_lat, dest_lon, dest_alt,
+                       departure_time + time_submit_flight_plan,
+                       'M600',
+                       'delivery',
+                       departure_time,
+                       data )
+
 
 def createDeliveryCSV( departure_times, frequencies, uncertainties, distributed, simulation_time ):
     '''
@@ -1255,9 +1258,10 @@ def createDeliveryCSV( departure_times, frequencies, uncertainties, distributed,
     for time in departure_times:
         # if time is int:
         #    time = '0{}'.format( str( datetime.timedelta( seconds=time) ) )
-        if time != None:
+        if time is not None:
             print( 'Create flight plan orig {0}'.format( idx + 1 ) )
-            createDeliveryDrone( origins[idx], dest_1, time, frequencies[idx], uncertainties[idx], distributed, simulation_time, data )
+            createDeliveryDrone( origins[idx], dest_1, time, frequencies[idx],
+                                 uncertainties[idx], distributed, simulation_time, data )
         idx += 1
     # CSV creation
     data_frame = pd.DataFrame( data )
@@ -1271,6 +1275,7 @@ def createDeliveryCSV( departure_times, frequencies, uncertainties, distributed,
     data_frame.to_csv( path )
 
     print( 'Delivery drones stored in : {0}'.format( path ) )
+
 
 def createScenarioCSV( density, avg_flight_duration, departure_times, frequencies, simulation_time, G, segments, config ):
     '''
@@ -1299,7 +1304,6 @@ def createScenarioCSV( density, avg_flight_duration, departure_times, frequencie
     # Add operation scenario (delivery)
     print( 'Creating delivery drones...' )
     createDeliveryCSV( departure_times, frequencies, simulation_time )
-
 
 
 # def createAllDroneScenario( total_drones ):
@@ -1370,6 +1374,7 @@ def drawBuildings( config, scenario_path_base, time='00:00:00.00' ):
             scenario_file = open( scenario_path_base + '_part' + str( scenario_idx ) + '.scn', 'w' )
 
     scenario_file.close()
+
 
 def createFlightPlansFromCSV( default_path, path_csv, strategic_deconfliction, G, segments, config ):
     '''
@@ -1476,8 +1481,6 @@ def createFlightPlansFromCSV( default_path, path_csv, strategic_deconfliction, G
         scenario_general_file.write( '00:00:00.00 > PCALL ' + relative_path + ' REL' + '\n' )
     scenario_general_file.close()
     print( 'Output scenario stored in the following directory {0}'.format( scenario_general_path_base ) )
-
-
 
 
 if __name__ == '__main__':
