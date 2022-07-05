@@ -48,7 +48,8 @@ def init_plugin():
     global usepedronecommands
 
     # ---------------------------------- DEFINED BY USER ------------------------------------
-    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\settings_exercise_1_reference.cfg"
+    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\settings_exercise_1_reference.cfg"
+    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
     # ------------------------------------------------------------------------------------------
 
     # graph_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\testing_graph.graphml"
@@ -168,11 +169,15 @@ class UsepeSegments( core.Entity ):
             self.segments = pickle.load( f )
 
         #### Remove: This is included for testing. We want to avoid no-fly zones
-        for key in self.segments:
-            if self.segments[key]['speed'] == 0:
-                self.segments[key]['speed'] = 5
-                self.segments[key]['capacity'] = 1
-                self.segments[key]['updated'] = True
+        # for key in self.segments:
+        #     self.segments[key]['speed'] = 20
+        #     self.segments[key]['capacity'] = 5
+        #     self.segments[key]['updated'] = True
+        #     self.segments[key]['new'] = True
+        #     if self.segments[key]['speed'] == 0:
+        #         self.segments[key]['speed'] = 5
+        #         self.segments[key]['capacity'] = 1
+        #         self.segments[key]['updated'] = True
         usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )
         #####
 
@@ -184,7 +189,17 @@ class UsepeSegments( core.Entity ):
         if not usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
             return updated, self.segments
 
-        if ( sim.simt > 30 ) & ( sim.simt < 32 ):
+        if ( sim.simt > 1800 ) & ( sim.simt < 1802 ):
+            self.segments['573']['speed'] = 0
+            self.segments['573']['capacity'] = 0
+            self.segments['573']['updated'] = True
+            updated = True
+            stack.stack( 'POLY segment573 52.375,9.72,52.375,9.73,52.3875,9.73,52.3875,9.72' )
+
+        if ( sim.simt > 3600 ) & ( sim.simt < 3602 ):
+            self.segments['573']['speed'] = 20
+            self.segments['573']['capacity'] = 5
+            self.segments['573']['updated'] = True
             updated = True
         segments = self.segments
 
@@ -221,16 +236,19 @@ class UsepeSegments( core.Entity ):
                 if alt0 < 0:
                     alt0 = traf.alt[idx]
 
-                mask = usepeflightplans.flight_plan_df_back_up['ac'] == acid
+                latf = acrte.wplat[-1]
+                lonf = acrte.wplon[-1]
+                altf = acrte.wpalt[-1]
 
-                latf = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['destination_lat']
-                lonf = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['destination_lon']
-                altf = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['destination_alt']
+                if altf < 0:
+                    mask = usepeflightplans.flight_plan_df_back_up['ac'] == acid
+                    altf = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['destination_alt']
+                    altf = traf.alt[idx]
 
                 orig = [lon0, lat0, alt0 ]
                 dest = [lonf, latf, altf ]
 
-                # We check which is the origin is in a no fly zone
+                # We check which if the origin is in a no fly zone
                 cond = ( segments_df['lon_min'] <= lon0 ) & ( segments_df['lon_max'] > lon0 ) & \
                     ( segments_df['lat_min'] <= lat0 ) & ( segments_df['lat_max'] > lat0 ) & \
                     ( segments_df['z_min'] <= alt0 ) & ( segments_df['z_max'] > alt0 )
@@ -340,7 +358,7 @@ class UsepeStrategicDeconfliction( core.Entity ):
             vs_max = 8
             safety_volume_size = 1
         elif row['drone'] == 'W178':
-            v_max = 41
+            v_max = 42
             vs_max = 6
             safety_volume_size = 1
 
@@ -398,13 +416,20 @@ class UsepeStrategicDeconfliction( core.Entity ):
 
             dest2 = [lonf2, latf2, altf2 ]
 
-            users, route, delayed_time = deconflictedDeliveryPathPlanning( orig, dest, dest, dest2,
-                                                                           departure_time, usepegraph.graph,
-                                                                           self.users, self.initial_time,
-                                                                           self.final_time,
-                                                                           copy.deepcopy( usepesegments.segments ),
-                                                                           usepeconfig, ac, hovering_time=30,
-                                                                           only_rerouting=True )
+            if ( dest[0] == dest2[0] ) and ( dest[1] == dest2[1] ):  #  if delivery drone is already coming back
+                users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
+                                                                       usepegraph.graph, self.users,
+                                                                       self.initial_time, self.final_time,
+                                                                       copy.deepcopy( usepesegments.segments ), usepeconfig,
+                                                                       ac, only_rerouting=True )
+            else:
+                users, route, delayed_time = deconflictedDeliveryPathPlanning( orig, dest, dest, dest2,
+                                                                               departure_time, usepegraph.graph,
+                                                                               self.users, self.initial_time,
+                                                                               self.final_time,
+                                                                               copy.deepcopy( usepesegments.segments ),
+                                                                               usepeconfig, ac, hovering_time=30,
+                                                                               only_rerouting=True )
         else:
             users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
                                                                    usepegraph.graph, self.users,
@@ -493,8 +518,11 @@ class UsepeDroneCommands( core.Entity ):
         scenario_file = open( scenario_path, 'w' )
 
         if ac['purpose'] == 'delivery':
-            createDeliveryFlightPlan( route[0], route[1], ac, departure_time, G, layers_dict,
-                                      scenario_file, scenario_path, hovering_time=30 )
+            if len( route ) == 2:
+                createDeliveryFlightPlan( route[0], route[1], ac, departure_time, G, layers_dict,
+                                          scenario_file, scenario_path, hovering_time=30 )
+            else:
+                createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
         else:
             createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
 
@@ -558,12 +586,41 @@ class UsepeFlightPlan( core.Entity ):
         """
         To process the planned flight plans
         """
+        segments_df = pd.DataFrame.from_dict( usepesegments.segments, orient='index' )
         while not self.flight_plan_df_buffer[self.flight_plan_df_buffer['planned_time_s'] <= sim.simt].empty:
             df_row = self.flight_plan_df_buffer.iloc[[0]]
             print( df_row )
-            usepestrategic.strategicDeconflictionDrone( df_row )
 
-            self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
+            row = df_row.iloc[0]
+            orig = [row['origin_lon'], row['origin_lat'], row['origin_alt'] ]
+            dest = [row['destination_lon'], row['destination_lat'], row['destination_alt'] ]
+
+            # We check if the origin/destination is in a no fly zone
+            cond = ( segments_df['lon_min'] <= orig[0] ) & ( segments_df['lon_max'] > orig[0] ) & \
+                ( segments_df['lat_min'] <= orig[1] ) & ( segments_df['lat_max'] > orig[1] ) & \
+                ( segments_df['z_min'] <= orig[2] ) & ( segments_df['z_max'] > orig[2] )
+
+            if segments_df[cond].empty:
+                segment_name_0 = 'N/A'
+            else:
+                segment_name_0 = segments_df[cond].index[0]
+
+            # We check which is the destination is in a no fly zone
+            cond = ( segments_df['lon_min'] <= dest[0] ) & ( segments_df['lon_max'] > dest[0] ) & \
+                ( segments_df['lat_min'] <= dest[1] ) & ( segments_df['lat_max'] > dest[1] ) & \
+                ( segments_df['z_min'] <= dest[2] ) & ( segments_df['z_max'] > dest[2] )
+
+            if segments_df[cond].empty:
+                segment_name_f = 'N/A'
+            else:
+                segment_name_f = segments_df[cond].index[0]
+
+            if ( self.segments[segment_name_0]['speed'] == 0 ) | ( self.segments[segment_name_f]['speed'] == 0 ):
+                # origin or destination is not allowed, so the flight plan is rejected
+                self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
+            else:
+                usepestrategic.strategicDeconflictionDrone( df_row )
+                self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
 
     def reprocessFlightPlans( self ):
         """
@@ -575,12 +632,41 @@ class UsepeFlightPlan( core.Entity ):
         self.flight_plan_df_processed = pd.DataFrame( columns=list( self.flight_plan_df.columns ) +
                                                       ['delayed_time'] + ['ac'] )
 
+        segments_df = pd.DataFrame.from_dict( usepesegments.segments, orient='index' )
         while not previous_df.empty:
             df_row = previous_df.iloc[[0]]
             print( df_row )
-            usepestrategic.strategicDeconflictionDrone( df_row, new=False )
 
-            previous_df = previous_df.drop( previous_df.index[0] )
+            row = df_row.iloc[0]
+            orig = [row['origin_lon'], row['origin_lat'], row['origin_alt'] ]
+            dest = [row['destination_lon'], row['destination_lat'], row['destination_alt'] ]
+
+            # We check if the origin/destination is in a no fly zone
+            cond = ( segments_df['lon_min'] <= orig[0] ) & ( segments_df['lon_max'] > orig[0] ) & \
+                ( segments_df['lat_min'] <= orig[1] ) & ( segments_df['lat_max'] > orig[1] ) & \
+                ( segments_df['z_min'] <= orig[2] ) & ( segments_df['z_max'] > orig[2] )
+
+            if segments_df[cond].empty:
+                segment_name_0 = 'N/A'
+            else:
+                segment_name_0 = segments_df[cond].index[0]
+
+            # We check which is the destination is in a no fly zone
+            cond = ( segments_df['lon_min'] <= dest[0] ) & ( segments_df['lon_max'] > dest[0] ) & \
+                ( segments_df['lat_min'] <= dest[1] ) & ( segments_df['lat_max'] > dest[1] ) & \
+                ( segments_df['z_min'] <= dest[2] ) & ( segments_df['z_max'] > dest[2] )
+
+            if segments_df[cond].empty:
+                segment_name_f = 'N/A'
+            else:
+                segment_name_f = segments_df[cond].index[0]
+
+            if ( self.segments[segment_name_0]['speed'] == 0 ) | ( self.segments[segment_name_f]['speed'] == 0 ):
+                # origin or destination is not allowed, so the flight plan is rejected
+                previous_df = previous_df.drop( previous_df.index[0] )
+            else:
+                usepestrategic.strategicDeconflictionDrone( df_row, new=False )
+                previous_df = previous_df.drop( previous_df.index[0] )
 
 
     def update( self ):  # Not used
@@ -604,7 +690,7 @@ class StateBasedUsepe( ConflictDetection ):
         lookup_tables_dir = usepeconfig['BlueSky']['lookup_tables_dir']
         self.tables = self.readAllLookUpTables( lookup_tables_dir )
 
-        self.table_grid = 25
+        self.table_grid = 10
         self.time_to_react_min = 5
         self.table_gs_list = [6, 12, 18, 24, 44]
 
@@ -619,15 +705,17 @@ class StateBasedUsepe( ConflictDetection ):
         for file in listdir( lookup_tables_dir ):
             path = join( lookup_tables_dir, file )
             df = self.readLookUpTable( path )
-            tables[file[6:-4]] = df
+            tables[file[6:-6]] = df
         return tables
 
-    def checkTable( self, table, x, y, course ):
+    def checkTable( self, table, x, y, course, gs_ow, gs_in ):
         if table.empty:
             return [0]
 
         df = table[( table['x'] == x ) &
                    ( table['y'] == y ) &
+                   ( table['v_ow'] == gs_ow ) &
+                   ( table['v_in'] == gs_in ) &
                    ( table['course'] == course ) ].sort_values( by=['time'] )
         time_to_react = list( df['time'] )
         return time_to_react
@@ -638,9 +726,12 @@ class StateBasedUsepe( ConflictDetection ):
         elif drone == 'M600':
             drone_code = 'D'
         elif drone == 'W178':
-            drone_code == 'M'
+            if gs > 12:
+                drone_code == 'F'
+            else:
+                drone_code == 'M'
 
-        key = '-'.join( [drone_code, manoeuvre, str( gs )] )
+        key = '-'.join( [drone_code, manoeuvre] )
         if key in self.tables:
             return self.tables[key]
         else:
@@ -750,6 +841,8 @@ class StateBasedUsepe( ConflictDetection ):
 
         # print( 'confpairs_default' )
         # print( self.confpairs_default )
+        print( 'default' )
+        print( self.confpairs_default )
 
         if usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
 
@@ -768,11 +861,12 @@ class StateBasedUsepe( ConflictDetection ):
                         # Ownship speed
                         own_gs_iter = ownship.gs[i]  # m/s
 
+                        own_gs_iter_table = min( self.table_gs_list, key=lambda x:abs( x - own_gs_iter ) )
+
                         # Intruder track angle and speed
                         int_gs_iter = intruder.gs[j]  # m/s
 
-                        # select table
-                        table = self.selectTable( ownship.type[i], 'V', min( self.table_gs_list, key=lambda x:abs( x - own_gs_iter ) ) )
+                        int_gs_iter_table = min( self.table_gs_list, key=lambda x:abs( x - int_gs_iter ) )
 
                         dx_grid = [math.floor( dx_iter / self.table_grid ), math.floor( dx_iter / self.table_grid ),
                                    math.ceil( dx_iter / self.table_grid ), math.ceil( dx_iter / self.table_grid )]
@@ -780,13 +874,22 @@ class StateBasedUsepe( ConflictDetection ):
                         dy_grid = [math.floor( dy_iter / self.table_grid ), math.ceil( dy_iter / self.table_grid ),
                                    math.floor( dy_iter / self.table_grid ), math.ceil( dy_iter / self.table_grid )]
 
-                        time_to_react_list = []
+                        time_to_react_all_list = []
+                        for manoeuvre in ['H', 'S', 'V']:
+                            # select table
+                            table = self.selectTable( ownship.type[i], manoeuvre, own_gs_iter_table )
+                            time_to_react_list = []
 
-                        for x, y in zip( dx_grid, dy_grid ):
-                            time_to_react_list.extend( self.checkTable( table, x, y, qdr_iter ) )
-
-                        if time_to_react_list:
-                            if min( time_to_react_list ) <= self.time_to_react_min:
+                            for x, y in zip( dx_grid, dy_grid ):
+                                if manoeuvre == 'S' and x == 0 and qdr_iter == 0:  # check this condition
+                                    time_to_react_list.extend( [0] )
+                                else:
+                                    time_to_react_list.extend( self.checkTable( table, x, y, qdr_iter, own_gs_iter_table, int_gs_iter_table ) )
+                            print( time_to_react_list )
+                            if time_to_react_list:
+                                time_to_react_all_list.extend( [min( time_to_react_list )] )
+                        if time_to_react_all_list:
+                            if max( time_to_react_all_list ) <= self.time_to_react_min:
                                 pass
                             else:
                                 swconfl[i][j] = False
@@ -802,6 +905,9 @@ class StateBasedUsepe( ConflictDetection ):
 
             # Select conflicting pairs: each a/c gets their own record
             confpairs = [( ownship.id[i], ownship.id[j] ) for i, j in zip( *np.where( swconfl ) )]
+
+            print( 'confpairs' )
+            print( confpairs )
 
         # print( 'confpairs' )
         # print( confpairs )

@@ -314,4 +314,7 @@ def main( path, grid_spacing_list, time ):
 
 
 if __name__ == '__main__':
-    main()
+    path = r".\data\test_hannover_1m_masked_M03.000.nc"
+    grid_spacing_list = [5, 10, 20, 50]
+    time = 0
+    main( path, grid_spacing_list, time )
