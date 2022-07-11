@@ -3,6 +3,8 @@
 from bluesky import core, traf, stack #, settings, navdb, sim, scr, tools
 from bluesky.tools import datalog
 
+import numpy as np
+
 # List of the names of all the data loggers
 loggers = ['USEPECONFLOG', 'USEPELOSLOG', 'USEPECPALOG']
 
@@ -74,11 +76,29 @@ class UsepeLogger(core.Entity):
         self.prevconf = list()
         self.prevlos = list()
 
+        with self.settrafarrays():
+            self.recentpath = np.array([], dtype=np.ndarray)
+
     def update(self):
         ''' Periodic function calling each logger function. '''
         self.conf_logger()
         self.los_logger()
         self.cpa_logger()
+
+        self.mark_coordinates()
+
+    def create(self, n=1):
+        super().create(n)
+
+        self.recentpath[-n:] = [np.empty(300, dtype=tuple) for _ in range(n)]
+
+    def mark_coordinates(self):
+        for i in range(self.recentpath.size):
+            temparr = np.empty_like(self.recentpath[i])
+            currentcoord = (traf.lat[i], traf.lon[i])
+            temparr[-1] = currentcoord
+            temparr[:-1] = self.recentpath[i][1:]
+            self.recentpath[i][:] = temparr
 
     def conf_logger(self):
         ''' Sorts current conflicts and logs new and ended events. '''
