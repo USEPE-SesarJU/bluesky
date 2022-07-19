@@ -138,9 +138,9 @@ def droneAirspaceUsage( G, route, time, users_planned, initial_time, final_time,
 
         if G.nodes[wpt2]['segment'] == actual_segment:
             actual_time += calcTravelTime( route_parameters, ac, step )
-            tf = math.floor( actual_time )
-            if wpt2 == route[-1]:
 
+            if wpt2 == route[-1]:
+                tf = math.floor( actual_time )
                 segment_list = [1 * ac['safety_volume_size'] if ( i >= t0 ) & ( i < tf ) else 0 for i in range( final_time - initial_time )]
                 users[actual_segment] = list( map( add, users[actual_segment], segment_list ) )
         else:
@@ -155,8 +155,8 @@ def droneAirspaceUsage( G, route, time, users_planned, initial_time, final_time,
 
         step += 1
 
-    # if tf > final_time:
-    #    print( 'Warning! Drone ends its trajectory at {0}, but the simulation ends at {1}'.format( tf, final_time ) )
+    if tf > final_time:
+        print( 'Warning! Drone ends its trajectory at {0}, but the simulation ends at {1}'.format( tf, final_time ) )
 
     return users
 
@@ -195,9 +195,9 @@ def droneAirspaceUsageDelivery( G, route, time, users_planned, initial_time, fin
 
         if G.nodes[wpt2]['segment'] == actual_segment:
             actual_time += calcTravelTime( route_parameters, ac, step )
-            tf = math.floor( actual_time )
-            if wpt2 == route[-1]:
 
+            if wpt2 == route[-1]:
+                tf = math.floor( actual_time )
                 segment_list = [1 * ac['safety_volume_size'] if ( i >= t0 ) & ( i < tf ) else 0 for i in range( final_time - initial_time )]
                 users[actual_segment] = list( map( add, users[actual_segment], segment_list ) )
         else:
@@ -216,8 +216,8 @@ def droneAirspaceUsageDelivery( G, route, time, users_planned, initial_time, fin
 
         step += 1
 
-    # if tf > final_time:
-    #    print( 'Warning! Drone ends its trajectory at {0}, but the simulation ends at {1}'.format( tf, final_time ) )
+    if tf > final_time:
+        print( 'Warning! Drone ends its trajectory at {0}, but the simulation ends at {1}'.format( tf, final_time ) )
 
     return users, tf + hovering_time
 
