@@ -150,17 +150,17 @@ def referenceSegments( rules_path, segment_path ):
             defineSegment( segments, lon_min, lon_max, lat_min, lat_max, z_min, z_max,
                            speed, capacity, name, 'white' )
 
-    with open( 'reference_segments.pkl', 'wb' ) as f:
+    with open( 'reference_segments_updated.pkl', 'wb' ) as f:
         pickle.dump( segments, f )
 
-    with open( 'reference_segments.pkl', 'rb' ) as f:
+    with open( 'reference_segments_updated.pkl', 'rb' ) as f:
         loaded_dict = pickle.load( f )
 
 
 if __name__ == '__main__':
     # ----------------- Defined by user ------------------ #
     rules_path = r'../config/rules.json'
-    segment_path = r"../data/examples/hannover.geojson"
+    segment_path = r"../data/examples/Region_Hannover_updated.geojson"
 
     # ----------------------------------------------------- #
     # offlineSegments(rules_path, segment_path)

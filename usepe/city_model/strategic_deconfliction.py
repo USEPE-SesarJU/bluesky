@@ -129,6 +129,7 @@ def droneAirspaceUsage( G, route, time, users_planned, initial_time, final_time,
     actual_segment = None
     actual_time = time
     t0 = time
+    tf = actual_time
     step = 0
     for wpt2 in route:
         if not actual_segment:
@@ -155,8 +156,11 @@ def droneAirspaceUsage( G, route, time, users_planned, initial_time, final_time,
 
         step += 1
 
-    if tf > final_time:
-        print( 'Warning! Drone ends its trajectory at {0}, but the simulation ends at {1}'.format( tf, final_time ) )
+    try:
+        if tf > final_time:
+            print( 'Warning! Drone ends its trajectory at {0}, but the simulation ends at {1}'.format( tf, final_time ) )
+    except:
+        pass
 
     return users
 
@@ -186,6 +190,7 @@ def droneAirspaceUsageDelivery( G, route, time, users_planned, initial_time, fin
     actual_segment = None
     actual_time = time
     t0 = time
+    tf = actual_time
     step = 0
     for wpt2 in route:
         if not actual_segment:
