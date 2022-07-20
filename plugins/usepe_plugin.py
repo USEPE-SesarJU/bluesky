@@ -189,7 +189,7 @@ class UsepeSegments( core.Entity ):
         if not usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
             return updated, self.segments
 
-        if ( sim.simt > 1800 ) & ( sim.simt < 1802 ):
+        '''if ( sim.simt > 1800 ) & ( sim.simt < 1802 ):
             self.segments['573']['speed'] = 0
             self.segments['573']['capacity'] = 0
             self.segments['573']['updated'] = True
@@ -201,7 +201,68 @@ class UsepeSegments( core.Entity ):
             self.segments['573']['capacity'] = 5
             self.segments['573']['updated'] = True
             updated = True
+        '''
         segments = self.segments
+
+
+        '''Inputs provided for the update rules'''
+        # waypoints for each drone + graph
+
+        # drone path (Joakim)
+
+        # Go through all conflict pairs and sort the IDs for easier matching
+        currentconf = [sorted( pair ) for pair in traf.cd.confpairs_unique]  # pairs of drones in conflict
+
+        # for each pair in conflict, the latitude, longitude and altitude of the Closest Point of Approach (CPA)
+        currentconf_loc = []
+        for pair in currentconf:
+            pair_index = traf.cd.confpairs.index( pair )
+            drone_1_index = traf.id.index( pair[0] )
+
+            dist_to_cpa = traf.cd.dcpa[pair_index]  # check units
+
+            lat_cpa = traf.lat[drone_1_index] + ( dist_to_cpa * math.sin( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / 1E7 )
+            lon_cpa = traf.lon[drone_1_index] + ( dist_to_cpa * math.cos( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / ( 1E7 * math.cos( traf.lat[drone_1_index] ) ) )
+            alt_cpa = traf.alt[drone_1_index]
+
+            currentconf_loc.append( ( lat_cpa, lon_cpa, alt_cpa ) )
+
+        # for each pair in conflict, headings of each drone
+        currentconf_hdg = []
+        for pair in currentconf:
+            pair_index = traf.cd.confpairs.index( pair )
+            drone_1_index = traf.id.index( pair[0] )
+            drone_2_index = traf.id.index( pair[1] )
+            currentconf_hdg.append( ( traf.hdg[drone_1_index], traf.hdg[drone_2_index] ) )
+
+
+        # value of the conflict frequency threshold, e.g., 1 conflict / (km^2 * hour)
+        usepeconfig['Segmentation']['conflict_threshold']
+
+        # historic positions of drones
+
+        # drones positions at the moment of the update
+        positions = {}
+        idx = 0
+        for id in traf.id:
+            positions[id] = ( traf.lat[idx], traf.lon[idx], traf.alt[idx] )
+            idx += 1
+
+        # external file (csv, txt, cfg) that provides: area definition, event start time, event end time
+
+
+        '''Update rules'''
+        # Wind dependence
+        # segmentation_service.wind_update()
+
+        # Conflict dependence
+        # segmentation_service.conflict_update()
+
+        # Traffic dependence
+        # segmentation_service.traffic_update()
+
+        # Event
+        # segmentation_service.event_update()
 
         return updated, segments
 
