@@ -247,11 +247,12 @@ class UsepeSegments( core.Entity ):
 
         # historic positions of drones
 
+
         # drones positions at the moment of the update
-        positions = {}
+        positions = []
         idx = 0
         for id in traf.id:
-            positions[id] = ( traf.lat[idx], traf.lon[idx], traf.alt[idx] )
+            positions.append( ( traf.lat[idx], traf.lon[idx], traf.alt[idx] ) )
             idx += 1
 
         # external file (csv, txt, cfg) that provides: area definition, event start time, event end time
