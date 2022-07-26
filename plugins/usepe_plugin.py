@@ -14,7 +14,6 @@ from bluesky.tools import geo
 from bluesky.tools.aero import nm
 from bluesky.traffic.asas.detection import ConflictDetection
 from bluesky.traffic.asas.statebased import StateBased
-from plugins import usepe_logger
 from usepe.city_model.dynamic_segments import dynamicSegments
 from usepe.city_model.scenario_definition import createFlightPlan, createDeliveryFlightPlan
 from usepe.city_model.strategic_deconfliction import initialPopulation, deconflictedPathPlanning, deconflictedDeliveryPathPlanning
@@ -33,6 +32,7 @@ usepesegments = None
 usepestrategic = None
 usepeflightplans = None
 usepedronecommands = None
+updateInterval = 1.0
 
 
 # ## Initialisation function of your plugin. Do not change the name of this
@@ -85,7 +85,7 @@ def init_plugin():
     config = {
         'plugin_name': 'USEPE',
         'plugin_type': 'sim',
-        'update_interval': 1.0,
+        'update_interval': updateInterval,
 
         # The update function is called after traffic is updated.
         'update': update,
@@ -184,6 +184,15 @@ class UsepeSegments( core.Entity ):
         # Include the region for input
         #####
 
+        with self.settrafarrays():
+            self.recentpath = np.array([], dtype=np.ndarray)
+
+    def create(self, n=1):
+        super().create(n)
+
+        positions = math.ceil(300/updateInterval)
+        self.recentpath[-n:] = [np.empty(positions, dtype=tuple) for _ in range(n)]
+
     def dynamicSegments( self ):
         """
         TODO. Here we have to include the function which updates the segments
@@ -214,7 +223,12 @@ class UsepeSegments( core.Entity ):
         usepegraph.nodes  # dict containng the features of each waypoint key - waypoint id, value dict with features and its values
 
         # drone path (Joakim)
-        usepe_logger.recentpath  # array with the positions of the drones in flight during the last 5 minutes
+        for i in range(self.recentpath.size):
+            temparr = np.empty_like(self.recentpath[i])
+            currentpos = (sim.simt, traf.lat[i], traf.lon[i], traf.alt[i])
+            temparr[-1] = currentpos
+            temparr[:-1] = self.recentpath[i][1:]
+            self.recentpath[i][:] = temparr
 
         # Go through all conflict pairs and sort the IDs for easier matching
         currentconf = [sorted( pair ) for pair in traf.cd.confpairs_unique]  # pairs of drones in conflict
