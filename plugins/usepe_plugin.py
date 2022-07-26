@@ -14,6 +14,7 @@ from bluesky.tools import geo
 from bluesky.tools.aero import nm
 from bluesky.traffic.asas.detection import ConflictDetection
 from bluesky.traffic.asas.statebased import StateBased
+from plugins import usepe_logger
 from usepe.city_model.dynamic_segments import dynamicSegments
 from usepe.city_model.scenario_definition import createFlightPlan, createDeliveryFlightPlan
 from usepe.city_model.strategic_deconfliction import initialPopulation, deconflictedPathPlanning, deconflictedDeliveryPathPlanning
@@ -179,6 +180,8 @@ class UsepeSegments( core.Entity ):
         #         self.segments[key]['capacity'] = 1
         #         self.segments[key]['updated'] = True
         usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )
+        # Initialise class of dynamic segmentation - it provides the initial segments
+        # Include the region for input
         #####
 
     def dynamicSegments( self ):
@@ -207,8 +210,11 @@ class UsepeSegments( core.Entity ):
 
         '''Inputs provided for the update rules'''
         # waypoints for each drone + graph
+        usepeflightplans.route_dict  # dictionary containing the waypoints of each drone flying. Key - drone id, values - list of waypoints id
+        usepegraph.nodes  # dict containng the features of each waypoint key - waypoint id, value dict with features and its values
 
         # drone path (Joakim)
+        usepe_logger.recentpath  # array with the positions of the drones in flight during the last 5 minutes
 
         # Go through all conflict pairs and sort the IDs for easier matching
         currentconf = [sorted( pair ) for pair in traf.cd.confpairs_unique]  # pairs of drones in conflict
@@ -252,17 +258,7 @@ class UsepeSegments( core.Entity ):
 
 
         '''Update rules'''
-        # Wind dependence
-        # segmentation_service.wind_update()
-
-        # Conflict dependence
-        # segmentation_service.conflict_update()
-
-        # Traffic dependence
-        # segmentation_service.traffic_update()
-
-        # Event
-        # segmentation_service.event_update()
+        # Call update method from dynamic segments class - includes all the rules
 
         return updated, segments
 
