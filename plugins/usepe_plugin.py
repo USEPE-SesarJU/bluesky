@@ -185,13 +185,13 @@ class UsepeSegments( core.Entity ):
         #####
 
         with self.settrafarrays():
-            self.recentpath = np.array([], dtype=np.ndarray)
+            self.recentpath = np.array( [], dtype=np.ndarray )
 
-    def create(self, n=1):
-        super().create(n)
+    def create( self, n=1 ):
+        super().create( n )
 
-        positions = math.ceil(300/updateInterval)
-        self.recentpath[-n:] = [np.empty(positions, dtype=tuple) for _ in range(n)]
+        positions = math.ceil( 300 / updateInterval )
+        self.recentpath[-n:] = [np.empty( positions, dtype=tuple ) for _ in range( n )]
 
     def dynamicSegments( self ):
         """
@@ -220,18 +220,19 @@ class UsepeSegments( core.Entity ):
         '''Inputs provided for the update rules'''
         # waypoints for each drone + graph
         usepeflightplans.route_dict  # dictionary containing the waypoints of each drone flying. Key - drone id, values - list of waypoints id
-        usepegraph.nodes  # dict containng the features of each waypoint key - waypoint id, value dict with features and its values
+        # usepegraph.node  # dict containng the features of each waypoint key - waypoint id, value dict with features and its values
 
-        # drone path (Joakim)
-        for i in range(self.recentpath.size):
-            temparr = np.empty_like(self.recentpath[i])
-            currentpos = (sim.simt, traf.lat[i], traf.lon[i], traf.alt[i])
+        # drone path
+        for i in range( self.recentpath.size ):
+            temparr = np.empty_like( self.recentpath[i] )
+            currentpos = ( sim.simt, traf.lat[i], traf.lon[i], traf.alt[i] )
             temparr[-1] = currentpos
             temparr[:-1] = self.recentpath[i][1:]
             self.recentpath[i][:] = temparr
 
         # Go through all conflict pairs and sort the IDs for easier matching
-        currentconf = [sorted( pair ) for pair in traf.cd.confpairs_unique]  # pairs of drones in conflict
+        currentconf = [tuple( sorted( pair ) ) for pair in traf.cd.confpairs_unique]  # pairs of drones in conflict AT THIS MOMENT
+        # historic conflicts?
 
         # for each pair in conflict, the latitude, longitude and altitude of the Closest Point of Approach (CPA)
         currentconf_loc = []
@@ -257,19 +258,33 @@ class UsepeSegments( core.Entity ):
 
 
         # value of the conflict frequency threshold, e.g., 1 conflict / (km^2 * hour)
-        usepeconfig['Segmentation']['conflict_threshold']
+        # usepeconfig['Segmentation']['conflict_threshold']
 
-        # historic positions of drones
-
-
-        # drones positions at the moment of the update
-        positions = []
-        idx = 0
-        for id in traf.id:
-            positions.append( ( traf.lat[idx], traf.lon[idx], traf.alt[idx] ) )
-            idx += 1
 
         # external file (csv, txt, cfg) that provides: area definition, event start time, event end time
+
+
+        # Save variables
+        if ( sim.simt > 727 ) & ( sim.simt < 729 ):
+            #
+            with open( 'drones_routes.dict', 'wb' ) as file:
+                pickle.dump( usepeflightplans.route_dict, file )
+            #
+            # with open( 'graph_test.graph', 'wb' ) as file:
+            #    pickle.dump( usepegraph, filehandler )
+            #
+            with open( 'drones_actual_paths.list', 'wb' ) as file:
+                pickle.dump( self.recentpath, file )
+            #
+            with open( 'conflict_pairs.list', 'wb' ) as file:
+                pickle.dump( currentconf, file )
+            #
+            with open( 'conflict_pairs_cpa_location.list', 'wb' ) as file:
+                pickle.dump( currentconf_loc, file )
+            #
+            with open( 'conflict_pairs_headings.list', 'wb' ) as file:
+                pickle.dump( currentconf_hdg, file )
+            #
 
 
         '''Update rules'''
@@ -636,7 +651,7 @@ class UsepeFlightPlan( core.Entity ):
     This class contains all the information of the planned flights
     flight_plan_df: DataFrame with all the information passed to BlueSky
     flight_plan_df_buffer: DataFrame with all the flights that have not been planned yet (simt < planned_time_s)
-    flight_plan_df_buffer: DataFrame with all the flights that have been processed (simt > planned_time_s)
+    flight_plan_df_processed: DataFrame with all the flights that have been processed (simt > planned_time_s)
     '''
 
     def __init__( self, fligh_plan_csv_path ):
@@ -687,7 +702,7 @@ class UsepeFlightPlan( core.Entity ):
             else:
                 segment_name_f = segments_df[cond].index[0]
 
-            if ( self.segments[segment_name_0]['speed'] == 0 ) | ( self.segments[segment_name_f]['speed'] == 0 ):
+            if ( usepesegments.segments[segment_name_0]['speed'] == 0 ) | ( usepesegments.segments[segment_name_f]['speed'] == 0 ):
                 # origin or destination is not allowed, so the flight plan is rejected
                 self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
             else:
@@ -733,7 +748,7 @@ class UsepeFlightPlan( core.Entity ):
             else:
                 segment_name_f = segments_df[cond].index[0]
 
-            if ( self.segments[segment_name_0]['speed'] == 0 ) | ( self.segments[segment_name_f]['speed'] == 0 ):
+            if ( usepesegments.segments[segment_name_0]['speed'] == 0 ) | ( usepesegments.segments[segment_name_f]['speed'] == 0 ):
                 # origin or destination is not allowed, so the flight plan is rejected
                 previous_df = previous_df.drop( previous_df.index[0] )
             else:
