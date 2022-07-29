@@ -222,6 +222,9 @@ class UsepeSegments( core.Entity ):
         usepeflightplans.route_dict  # dictionary containing the waypoints of each drone flying. Key - drone id, values - list of waypoints id
         # usepegraph.node  # dict containng the features of each waypoint key - waypoint id, value dict with features and its values
 
+        # drone ids
+        # traf.id
+
         # drone path
         for i in range( self.recentpath.size ):
             temparr = np.empty_like( self.recentpath[i] )
@@ -229,6 +232,14 @@ class UsepeSegments( core.Entity ):
             temparr[-1] = currentpos
             temparr[:-1] = self.recentpath[i][1:]
             self.recentpath[i][:] = temparr
+
+        # active waypoint
+        actwp = []
+        for acid in traf.id:
+            idx = traf.id2idx( acid )
+            acrte = traf.ap.route[idx]
+            iactwp = acrte.iactwp
+            actwp.append( acrte.wpname[iactwp] )
 
         # Go through all conflict pairs and sort the IDs for easier matching
         currentconf = [tuple( sorted( pair ) ) for pair in traf.cd.confpairs_unique]  # pairs of drones in conflict AT THIS MOMENT
@@ -265,7 +276,16 @@ class UsepeSegments( core.Entity ):
 
 
         # Save variables
-        if ( sim.simt > 727 ) & ( sim.simt < 729 ):
+        if ( ( sim.simt > 27 ) & ( sim.simt < 29 ) ) or\
+            ( ( sim.simt > 627 ) & ( sim.simt < 629 ) ) or\
+            ( ( sim.simt > 727 ) & ( sim.simt < 729 ) ) or\
+            ( ( sim.simt > 1727 ) & ( sim.simt < 1729 ) ):
+            #
+            with open( 'drone_id.list', 'wb' ) as file:
+                pickle.dump( traf.id, file )
+            #
+            with open( 'drone_active_waypoint.list', 'wb' ) as file:
+                pickle.dump( actwp, file )
             #
             with open( 'drones_routes.dict', 'wb' ) as file:
                 pickle.dump( usepeflightplans.route_dict, file )
@@ -285,6 +305,7 @@ class UsepeSegments( core.Entity ):
             with open( 'conflict_pairs_headings.list', 'wb' ) as file:
                 pickle.dump( currentconf_hdg, file )
             #
+            # print( 'Saved.' )
 
 
         '''Update rules'''
