@@ -8,7 +8,7 @@
 	"close_class": "red",
 	"allowed_uas_speed": [5.0,10.0,15.0,20.0],
 	"wind_rules": {
-		"wind_data_folder": "./data/wind/",
+		"wind_data_folder": "./usepe/segmentation_service/data/wind/",
 		"wind_speed_th": 5.0, 
 		"turbulence_intensity_th": 0.4
 	},
@@ -19,7 +19,7 @@
 		
 	},
 	"event_rules":{
-		"event_data_folder": "./data/event/"
+		"event_data_folder": "./usepe/segmentation_service/data/event/"
 	},
     "classes": {
         "black": { "enter": false,  "altitude": [0, 500], "velocity": [0, 0], "capacity_factor": 0.0  },

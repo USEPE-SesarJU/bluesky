@@ -11,7 +11,7 @@ import math
 from usepe.city_model.dynamic_segments import dynamicSegments
 from usepe.city_model.path_planning import trajectoryCalculation, printRoute
 from usepe.city_model.scenario_definition import createFlightPlan, calcDistAccel, routeParameters
-
+from usepe.city_model.utils import checkIfNoFlyZone
 
 __author__ = 'jbueno'
 __copyright__ = '(c) Nommon 2021'
@@ -34,8 +34,8 @@ def initialPopulation( segments, t0, tf ):
     """
     users = {}
     empty_list = [0 for i in range( tf - t0 )]
-    for key in segments:
-        users[key] = empty_list
+    for idx, row in segments.iterrows():
+        users[str( idx )] = empty_list
 
     return users
 
@@ -250,10 +250,10 @@ def checkOverpopulatedSegment( segments, users, initial_time, final_time ):
     overpopulated_time = None
     cond = False
     for i in range( final_time - initial_time ):
-        for key in segments:
-            capacity = segments[key]['capacity']
-            if users[key][i] > capacity:
-                overpopulated_segment = key
+        for idx, row in segments.iterrows():
+            capacity = row['capacity']
+            if users[str( idx )][i] > capacity:
+                overpopulated_segment = str( idx )
                 overpopulated_time = i
                 cond = True
                 print( 'The segment {0} is overpopulated at {1} seconds'.format( 
@@ -303,6 +303,12 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
 
     """
 
+    # Check if the origin or destination is in a restricted area (spd = 0)
+    if checkIfNoFlyZone( orig[1], orig[0], None, G, segments ):
+        print( 'Drone {} Origin in no fly zone'.format( ac.id ) )
+    if checkIfNoFlyZone( dest[1], dest[0], None, G, segments ):
+        print( 'Drone {} Destination in no fly zone'.format( ac.id ) )
+
     delayed_time = time
     opt_travel_time, route = trajectoryCalculation( G, orig, dest )
 
@@ -318,8 +324,8 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
     G_step = G.copy()
     while overpopulated_segment:
         if type( overpopulated_segment ) == str:
-            segments_step[overpopulated_segment]['speed'] = 0
-            segments_step[overpopulated_segment]['updated'] = True
+            segments_step['speed_max'][overpopulated_segment] = 0
+            segments_step['updated'][overpopulated_segment] = True
 
             G_step, segments_step = dynamicSegments( G_step, None, segments_step )
 

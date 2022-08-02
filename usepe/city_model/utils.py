@@ -119,28 +119,46 @@ def checkIfNoFlyZone( lat, lon, alt, G, segments ):
     '''
     This function checks if the point or its nearest node is within a no-fly zone
     '''
-    # Get closed segments
-    closed_segments = {}
-    for segment_id, segment in segments.items():
-        if segment['speed'] == 0:
-            closed_segments[segment_id] = segment
-    # Check if the point is inside a no-fly zone
-    for segment_id, segment in closed_segments.items():
-        # Origin
-        if lat > segment['lat_min'] and  lat < segment['lat_max']:
-            if lon > segment['lon_min'] and  lon < segment['lon_max']:
-                print( 'Point in no fly zone: lat {0}, lon {1}'.format( lat, lon ) )
-                return True
-    # Check if the closest node of the graph is inside a no-fly zone
-    if alt == None:
-        nearest_node = ox.distance.nearest_nodes( G, X=lon, Y=lat )
+    if type( segments ) == dict:
+        # Get closed segments
+        closed_segments = {}
+        for segment_id, segment in segments.items():
+            if segment['speed'] == 0:
+                closed_segments[segment_id] = segment
+        # Check if the point is inside a no-fly zone
+        for segment_id, segment in closed_segments.items():
+            # Origin
+            if lat > segment['lat_min'] and  lat < segment['lat_max']:
+                if lon > segment['lon_min'] and  lon < segment['lon_max']:
+                    print( 'Point in no fly zone: lat {0}, lon {1}'.format( lat, lon ) )
+                    return True
+        # Check if the closest node of the graph is inside a no-fly zone
+        if alt == None:
+            nearest_node = ox.distance.nearest_nodes( G, X=lon, Y=lat )
+        else:
+            nearest_node = nearestNode3d( G, lon, lat, alt )
+        speed = segments[G.nodes[nearest_node]['segment']]['speed']
+        cap = segments[G.nodes[nearest_node]['segment']]['capacity']
+        if speed == 0:
+            return True
+        return False
     else:
-        nearest_node = nearestNode3d( G, lon, lat, alt )
-    speed = segments[G.nodes[nearest_node]['segment']]['speed']
-    cap = segments[G.nodes[nearest_node]['segment']]['capacity']
-    if speed == 0:
-        return True
-    return False
+        closed_segments = segments[segments['speed_max'] == 0]
+        for idx, row in closed_segments.iterrows():
+            if lat > row['lat_min'] and  lat < row['lat_max']:
+                if lon > row['lon_min'] and  lon < row['lon_max']:
+                    print( 'Point in no fly zone: lat {0}, lon {1}'.format( lat, lon ) )
+                    return True
+        # Check if the closest node of the graph is inside a no-fly zone
+        if alt == None:
+            nearest_node = ox.distance.nearest_nodes( G, X=lon, Y=lat )
+        else:
+            nearest_node = nearestNode3d( G, lon, lat, alt )
+        speed = segments.loc[G.nodes[nearest_node]['segment']]['speed_max']
+        cap = segments.loc[G.nodes[nearest_node]['segment']]['capacity']
+        if speed == 0:
+            return True
+        return False
 
 def shortest_dist_to_point( x1, y1, x2, y2, x, y ):
     '''

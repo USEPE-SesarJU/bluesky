@@ -10,7 +10,7 @@ from tqdm import tqdm
 import hvplot
 import hvplot.pandas
 
-from python.lib import air, autoseg, ground, misc, polygons
+from usepe.segmentation_service.python.lib import air, autoseg, ground, misc, polygons
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -32,6 +32,8 @@ class segmentationService:
 
         self.cells = misc.split_build( self.cells, self.rules["building_layer"] )
         print( "Altitude split at building top level ", self.rules["building_layer"], " m done." )
+
+        self.event_update = False
 
     def init_cells( self ):
         self.init_region()
@@ -331,7 +333,7 @@ class segmentationService:
                 ( self.rules["event_rules"]["event_data_folder"] + event + ".geojson" ),
                 driver="GeoJSON",
             )
-        if now < event.at[0, "end"]:
+        if now < event.at[0, "end"] + 1:
             p = Process( target=self.event_instance, args=( event, now ) )
             # self.event_instance(event, now)
             p.start()
@@ -347,17 +349,19 @@ class segmentationService:
             close, self.cells.sindex.query( event.at[0, "geometry"], predicate="within" )
         )
 
-        if event.at[0, "begin"] > now:
-            time.sleep( event.at[0, "begin"] - now )
+        if event.at[0, "begin"] == now:
+            # time.sleep( event.at[0, "begin"] - now )
+            print( "Event started." )
+            for idx in close:
+                self.close_cell( idx )
+            self.event_update = True
 
-        print( "Event started." )
-        for idx in close:
-            self.close_cell( idx )
-
-        time.sleep( event.at[0, "end"] - now )
-        print( "Event ended." )
-        for idx in close:
-            self.restore_cell( idx )
+        # time.sleep( event.at[0, "end"] - now )
+        if event.at[0, "end"] == now:
+            print( "Event ended." )
+            for idx in close:
+                self.restore_cell( idx )
+            self.event_update = True
         return
 
     def plot_cells( self ):
@@ -402,7 +406,7 @@ class segmentationService:
             join="inner",
         )
         export.to_json( 
-            ( "data/examples/" + self.region_name + ".json" ), orient="records", lines=True
+            ( "usepe/segmentation_service/data/examples/" + self.region_name + ".json" ), orient="records", lines=True
         )
         return
 

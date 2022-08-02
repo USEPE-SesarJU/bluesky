@@ -10,6 +10,7 @@ __copyright__ = '(c) Nommon 2021'
 import random
 import time
 
+import geopandas as gpd
 import networkx as nx
 import numpy as np
 import osmnx as ox
@@ -208,7 +209,7 @@ def updateSegmentVelocity( G, segments ):
 
     pd.set_option( 'mode.chained_assignment', None )
     edges['speed'][cond] = edges[cond]['segment'].apply( lambda segment_name:
-                                                         segments.loc[segment_name]['speed'] )
+                                                         segments.loc[segment_name]['speed_max'] )
 
     nx.set_edge_attributes( G, values=edges["speed"], name="speed" )
     return G
@@ -258,18 +259,20 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
             segments (dictionary): updated dictionary with all the information about segments
     """
     print( 'Updating segments...' )
-    if not segments:
-        segments = divideAirspaceSegments( config['City'].getfloat( 'hannover_lon_min' ),
-                                           config['City'].getfloat( 'hannover_lon_max' ),
-                                           config['City'].getfloat( 'hannover_lat_min' ),
-                                           config['City'].getfloat( 'hannover_lat_max' ),
-                                           0,
-                                           config['Layers'].getfloat( 'layer_width' ) *
-                                           ( config['Layers'].getfloat( 'number_of_layers' ) + 1 ),
-                                           4, 4, 2 )
+    if ( type( segments ) != pd.DataFrame ) and ( type( segments ) != gpd.GeoDataFrame ):
+        if not segments:
+            segments = divideAirspaceSegments( config['City'].getfloat( 'hannover_lon_min' ),
+                                               config['City'].getfloat( 'hannover_lon_max' ),
+                                               config['City'].getfloat( 'hannover_lat_min' ),
+                                               config['City'].getfloat( 'hannover_lat_max' ),
+                                               0,
+                                               config['Layers'].getfloat( 'layer_width' ) *
+                                               ( config['Layers'].getfloat( 'number_of_layers' ) + 1 ),
+                                               4, 4, 2 )
 
-    segments_df = pd.DataFrame.from_dict( segments, orient='index' )
-
+        segments_df = pd.DataFrame.from_dict( segments, orient='index' )
+    else:
+        segments_df = segments
     # We select only the new segments. The assignment of segments to edges is performed only in
     # these segments
     new_segments = segments_df[segments_df['new'] == True ]
@@ -290,7 +293,7 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
     segments_df['new'] = False
     segments_df['updated'] = False
 
-    segments = segments_df.to_dict( orient='index' )
+    # segments = segments_df.to_dict( orient='index' )
     print( 'Dynamic segments completed' )
     return G, segments
 

@@ -18,6 +18,8 @@ from usepe.city_model.dynamic_segments import dynamicSegments
 from usepe.city_model.scenario_definition import createFlightPlan, createDeliveryFlightPlan
 from usepe.city_model.strategic_deconfliction import initialPopulation, deconflictedPathPlanning, deconflictedDeliveryPathPlanning
 from usepe.city_model.utils import read_my_graphml, layersDict
+from usepe.segmentation_service.segmentation_service import segmentationService
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 
@@ -166,9 +168,17 @@ class UsepeSegments( core.Entity ):
     def __init__( self, segment_path ):
         super().__init__()
 
-        with open( segment_path, 'rb' ) as f:
-            self.segments = pickle.load( f )
+        # with open( segment_path, 'rb' ) as f:
+        #    self.segments = pickle.load( f )
 
+        # Initialise class of dynamic segmentation - it provides the initial segments
+        # Include the region for input
+        region = "Hannover"
+        self.segmentation_service = segmentationService( region )
+        self.segmentation_service .export_cells()  # export .json file to "./data/examples"
+
+        self.segments = pd.read_json( 'usepe/segmentation_service/data/examples/' + region + '.json', orient="records", lines=True )
+        # self.segments = self.segmentation_service.cells
         #### Remove: This is included for testing. We want to avoid no-fly zones
         # for key in self.segments:
         #     self.segments[key]['speed'] = 20
@@ -180,8 +190,7 @@ class UsepeSegments( core.Entity ):
         #         self.segments[key]['capacity'] = 1
         #         self.segments[key]['updated'] = True
         usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )
-        # Initialise class of dynamic segmentation - it provides the initial segments
-        # Include the region for input
+
         #####
 
         with self.settrafarrays():
@@ -190,7 +199,9 @@ class UsepeSegments( core.Entity ):
     def create( self, n=1 ):
         super().create( n )
 
-        positions = math.ceil( 300 / updateInterval )
+        path_recording_time = 300  # sec
+
+        positions = math.ceil( path_recording_time / updateInterval )
         self.recentpath[-n:] = [np.empty( positions, dtype=tuple ) for _ in range( n )]
 
     def dynamicSegments( self ):
@@ -214,7 +225,7 @@ class UsepeSegments( core.Entity ):
             self.segments['573']['updated'] = True
             updated = True
         '''
-        segments = self.segments
+
 
 
         '''Inputs provided for the update rules'''
@@ -274,7 +285,7 @@ class UsepeSegments( core.Entity ):
 
         # external file (csv, txt, cfg) that provides: area definition, event start time, event end time
 
-
+        '''
         # Save variables
         if ( ( sim.simt > 27 ) & ( sim.simt < 29 ) ) or\
             ( ( sim.simt > 627 ) & ( sim.simt < 629 ) ) or\
@@ -306,10 +317,24 @@ class UsepeSegments( core.Entity ):
                 pickle.dump( currentconf_hdg, file )
             #
             # print( 'Saved.' )
-
+        '''
 
         '''Update rules'''
-        # Call update method from dynamic segments class - includes all the rules
+        update_interval = 300  # sec
+        wind_file = usepeconfig['Segmentation service']['wind_path']
+
+        if sim.simt % update_interval == 0:
+            self.segmentation_service.update_wind_strat( wind_file, False )  # strategic update rules based on wind data
+            # self.segmentation_service.update_wind_tact(flight_plan, flight_log, city_graph) # not yet implemented
+            updated = True
+
+        # The event rule is continuous
+        self.segmentation_service.update_event( 'event', sim.simt )  # event update rule
+        if self.segmentation_service.event_update:
+            updated = True
+            self.segmentation_service.event_update = False
+
+        segments = self.segments
 
         return updated, segments
 
@@ -329,7 +354,8 @@ class UsepeSegments( core.Entity ):
             # 2nd: to initialised the population of segments
             usepestrategic.initialisedUsers()
 
-            segments_df = pd.DataFrame.from_dict( self.segments, orient='index' )
+            # segments_df = pd.DataFrame.from_dict( self.segments, orient='index' )
+            segments_df = self.segments
             # 3rd. To update the drones that are already flying
             for acid in traf.id:
                 print( acid )
@@ -376,7 +402,7 @@ class UsepeSegments( core.Entity ):
                 else:
                     segment_name_f = segments_df[cond].index[0]
 
-                if ( self.segments[segment_name_0]['speed'] == 0 ) | ( self.segments[segment_name_f]['speed'] == 0 ):
+                if ( self.segments['speed_max'][segment_name_0] == 0 ) | ( self.segments['speed_max'][segment_name_f] == 0 ):
                     # origin or destination is not allowed, so the drone lands
                     usepedronecommands.droneLanding( acid )
                     continue
@@ -694,7 +720,8 @@ class UsepeFlightPlan( core.Entity ):
         """
         To process the planned flight plans
         """
-        segments_df = pd.DataFrame.from_dict( usepesegments.segments, orient='index' )
+        # segments_df = pd.DataFrame.from_dict( usepesegments.segments, orient='index' )
+        segments_df = usepesegments.segments
         while not self.flight_plan_df_buffer[self.flight_plan_df_buffer['planned_time_s'] <= sim.simt].empty:
             df_row = self.flight_plan_df_buffer.iloc[[0]]
             print( df_row )
@@ -723,7 +750,7 @@ class UsepeFlightPlan( core.Entity ):
             else:
                 segment_name_f = segments_df[cond].index[0]
 
-            if ( usepesegments.segments[segment_name_0]['speed'] == 0 ) | ( usepesegments.segments[segment_name_f]['speed'] == 0 ):
+            if ( usepesegments.segments['speed_max'][segment_name_0] == 0 ) | ( usepesegments.segments['speed_max'][segment_name_f] == 0 ):
                 # origin or destination is not allowed, so the flight plan is rejected
                 self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
             else:
@@ -740,7 +767,8 @@ class UsepeFlightPlan( core.Entity ):
         self.flight_plan_df_processed = pd.DataFrame( columns=list( self.flight_plan_df.columns ) +
                                                       ['delayed_time'] + ['ac'] )
 
-        segments_df = pd.DataFrame.from_dict( usepesegments.segments, orient='index' )
+        # segments_df = pd.DataFrame.from_dict( usepesegments.segments, orient='index' )
+        segments_df = usepesegments.segments
         while not previous_df.empty:
             df_row = previous_df.iloc[[0]]
             print( df_row )
@@ -769,7 +797,7 @@ class UsepeFlightPlan( core.Entity ):
             else:
                 segment_name_f = segments_df[cond].index[0]
 
-            if ( usepesegments.segments[segment_name_0]['speed'] == 0 ) | ( usepesegments.segments[segment_name_f]['speed'] == 0 ):
+            if ( usepesegments.segments['speed_max'][segment_name_0] == 0 ) | ( usepesegments.segments['speed_max'][segment_name_f] == 0 ):
                 # origin or destination is not allowed, so the flight plan is rejected
                 previous_df = previous_df.drop( previous_df.index[0] )
             else:
