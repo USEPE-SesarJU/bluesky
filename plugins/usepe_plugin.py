@@ -2,12 +2,13 @@
 # Import the global bluesky objects. Uncomment the ones you need
 from os import listdir
 from os.path import join
-import configparser
 import copy
 import datetime
 import math
 import os
 import pickle
+
+import configparser
 
 from bluesky import core, traf, stack, sim  # , settings, navdb,  scr, tools
 from bluesky.tools import geo
@@ -73,11 +74,15 @@ def init_plugin():
     final_time = int( usepeconfig['BlueSky']['final_time'] )
 
     usepegraph = UsepeGraph( graph_path )
+    # print( ' - Graph initialised - ' )
     usepesegments = UsepeSegments( segment_path )
+    # print( ' - Segments initialised - ' )
     usepestrategic = UsepeStrategicDeconfliction( initial_time, final_time )
+    # print( ' - Strategic deconfliction initialised - ' )
     usepeflightplans = UsepeFlightPlan( flight_plan_csv_path )
+    # print( ' - Flight plan initialised - ' )
     usepedronecommands = UsepeDroneCommands()
-
+    # print( ' - Commands initialised - ' )
     # Activate the detection and resolution method, and logger
     configuration_path = r".{}".format( usepeconfig['BlueSky']['configuration_path'] )
     stack.stack( 'PCALL {} REL'.format( configuration_path ) )
@@ -108,19 +113,29 @@ def update():
         stack.stack( 'QUIT' )
 
     usepegraph.update()
+    # print( ' - Graph updated - ' )
     usepesegments.update()
+    # print( ' - Segments updated - ' )
     usepestrategic.update()
+    # print( ' - Strategic deconfliction updated - ' )
     usepeflightplans.update()
+    # print( ' - Flight plan updated - ' )
     usepedronecommands.update()
+    # print( ' - Commands updated - ' )
     return
 
 
 def preupdate():
     usepegraph.preupdate()
+    # print( ' - Graph pre-updated - ' )
     usepesegments.preupdate()
+    # print( ' - Segments pre-updated - ' )
     usepestrategic.preupdate()
+    # print( ' - Strategic deconfliction pre-updated - ' )
     usepeflightplans.preupdate()
+    # print( ' - Flight plan pre-updated - ' )
     usepedronecommands.preupdate()
+    # print( ' - Commands pre-updated - ' )
     return
 
 
@@ -225,105 +240,106 @@ class UsepeSegments( core.Entity ):
             self.segments['573']['updated'] = True
             updated = True
         '''
-
-
-
-        '''Inputs provided for the update rules'''
-        # waypoints for each drone + graph
-        usepeflightplans.route_dict  # dictionary containing the waypoints of each drone flying. Key - drone id, values - list of waypoints id
-        # usepegraph.node  # dict containng the features of each waypoint key - waypoint id, value dict with features and its values
-
-        # drone ids
-        # traf.id
-
-        # drone path
-        for i in range( self.recentpath.size ):
-            temparr = np.empty_like( self.recentpath[i] )
-            currentpos = ( sim.simt, traf.lat[i], traf.lon[i], traf.alt[i] )
-            temparr[-1] = currentpos
-            temparr[:-1] = self.recentpath[i][1:]
-            self.recentpath[i][:] = temparr
-
-        # active waypoint
-        actwp = []
-        for acid in traf.id:
-            idx = traf.id2idx( acid )
-            acrte = traf.ap.route[idx]
-            iactwp = acrte.iactwp
-            actwp.append( acrte.wpname[iactwp] )
-
-        # Go through all conflict pairs and sort the IDs for easier matching
-        currentconf = [tuple( sorted( pair ) ) for pair in traf.cd.confpairs_unique]  # pairs of drones in conflict AT THIS MOMENT
-        # historic conflicts?
-
-        # for each pair in conflict, the latitude, longitude and altitude of the Closest Point of Approach (CPA)
-        currentconf_loc = []
-        for pair in currentconf:
-            pair_index = traf.cd.confpairs.index( pair )
-            drone_1_index = traf.id.index( pair[0] )
-
-            dist_to_cpa = traf.cd.dcpa[pair_index]  # check units
-
-            lat_cpa = traf.lat[drone_1_index] + ( dist_to_cpa * math.sin( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / 1E7 )
-            lon_cpa = traf.lon[drone_1_index] + ( dist_to_cpa * math.cos( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / ( 1E7 * math.cos( traf.lat[drone_1_index] ) ) )
-            alt_cpa = traf.alt[drone_1_index]
-
-            currentconf_loc.append( ( lat_cpa, lon_cpa, alt_cpa ) )
-
-        # for each pair in conflict, headings of each drone
-        currentconf_hdg = []
-        for pair in currentconf:
-            pair_index = traf.cd.confpairs.index( pair )
-            drone_1_index = traf.id.index( pair[0] )
-            drone_2_index = traf.id.index( pair[1] )
-            currentconf_hdg.append( ( traf.hdg[drone_1_index], traf.hdg[drone_2_index] ) )
-
-
-        # value of the conflict frequency threshold, e.g., 1 conflict / (km^2 * hour)
-        # usepeconfig['Segmentation']['conflict_threshold']
-
-
-        # external file (csv, txt, cfg) that provides: area definition, event start time, event end time
-
-        '''
-        # Save variables
-        if ( ( sim.simt > 27 ) & ( sim.simt < 29 ) ) or\
-            ( ( sim.simt > 627 ) & ( sim.simt < 629 ) ) or\
-            ( ( sim.simt > 727 ) & ( sim.simt < 729 ) ) or\
-            ( ( sim.simt > 1727 ) & ( sim.simt < 1729 ) ):
-            #
-            with open( 'drone_id.list', 'wb' ) as file:
-                pickle.dump( traf.id, file )
-            #
-            with open( 'drone_active_waypoint.list', 'wb' ) as file:
-                pickle.dump( actwp, file )
-            #
-            with open( 'drones_routes.dict', 'wb' ) as file:
-                pickle.dump( usepeflightplans.route_dict, file )
-            #
-            # with open( 'graph_test.graph', 'wb' ) as file:
-            #    pickle.dump( usepegraph, filehandler )
-            #
-            with open( 'drones_actual_paths.list', 'wb' ) as file:
-                pickle.dump( self.recentpath, file )
-            #
-            with open( 'conflict_pairs.list', 'wb' ) as file:
-                pickle.dump( currentconf, file )
-            #
-            with open( 'conflict_pairs_cpa_location.list', 'wb' ) as file:
-                pickle.dump( currentconf_loc, file )
-            #
-            with open( 'conflict_pairs_headings.list', 'wb' ) as file:
-                pickle.dump( currentconf_hdg, file )
-            #
-            # print( 'Saved.' )
-        '''
-
-        '''Update rules'''
         update_interval = 300  # sec
-        wind_file = usepeconfig['Segmentation service']['wind_path']
+
 
         if sim.simt % update_interval == 0:
+            '''Inputs provided for the update rules'''
+            # waypoints for each drone + graph
+            usepeflightplans.route_dict  # dictionary containing the waypoints of each drone flying. Key - drone id, values - list of waypoints id
+            # usepegraph.node  # dict containng the features of each waypoint key - waypoint id, value dict with features and its values
+
+            # drone ids
+            # traf.id
+
+            # drone path
+            for i in range( self.recentpath.size ):
+                temparr = np.empty_like( self.recentpath[i] )
+                currentpos = ( sim.simt, traf.lat[i], traf.lon[i], traf.alt[i] )
+                temparr[-1] = currentpos
+                temparr[:-1] = self.recentpath[i][1:]
+                self.recentpath[i][:] = temparr
+
+            # active waypoint
+            actwp = []
+            for acid in traf.id:
+                idx = traf.id2idx( acid )
+                acrte = traf.ap.route[idx]
+                iactwp = acrte.iactwp
+                actwp.append( acrte.wpname[iactwp] )
+
+            # Go through all conflict pairs and sort the IDs for easier matching
+            currentconf = [tuple( sorted( pair ) ) for pair in traf.cd.confpairs_unique]  # pairs of drones in conflict AT THIS MOMENT
+            # historic conflicts?
+
+            # for each pair in conflict, the latitude, longitude and altitude of the Closest Point of Approach (CPA)
+            currentconf_loc = []
+            for pair in currentconf:
+                pair_index = traf.cd.confpairs.index( pair )
+                drone_1_index = traf.id.index( pair[0] )
+
+                dist_to_cpa = traf.cd.dcpa[pair_index]  # check units
+
+                lat_cpa = traf.lat[drone_1_index] + ( dist_to_cpa * math.sin( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / 1E7 )
+                lon_cpa = traf.lon[drone_1_index] + ( dist_to_cpa * math.cos( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / ( 1E7 * math.cos( traf.lat[drone_1_index] ) ) )
+                alt_cpa = traf.alt[drone_1_index]
+
+                currentconf_loc.append( ( lat_cpa, lon_cpa, alt_cpa ) )
+
+            # for each pair in conflict, headings of each drone
+            currentconf_hdg = []
+            for pair in currentconf:
+                pair_index = traf.cd.confpairs.index( pair )
+                drone_1_index = traf.id.index( pair[0] )
+                drone_2_index = traf.id.index( pair[1] )
+                currentconf_hdg.append( ( traf.hdg[drone_1_index], traf.hdg[drone_2_index] ) )
+
+
+            # value of the conflict frequency threshold, e.g., 1 conflict / (km^2 * hour)
+            # usepeconfig['Segmentation']['conflict_threshold']
+
+
+            # external file (csv, txt, cfg) that provides: area definition, event start time, event end time
+
+            '''
+            # Save variables
+            if ( ( sim.simt > 27 ) & ( sim.simt < 29 ) ) or\
+                ( ( sim.simt > 627 ) & ( sim.simt < 629 ) ) or\
+                ( ( sim.simt > 727 ) & ( sim.simt < 729 ) ) or\
+                ( ( sim.simt > 1727 ) & ( sim.simt < 1729 ) ):
+                #
+                with open( 'drone_id.list', 'wb' ) as file:
+                    pickle.dump( traf.id, file )
+                #
+                with open( 'drone_active_waypoint.list', 'wb' ) as file:
+                    pickle.dump( actwp, file )
+                #
+                with open( 'drones_routes.dict', 'wb' ) as file:
+                    pickle.dump( usepeflightplans.route_dict, file )
+                #
+                # with open( 'graph_test.graph', 'wb' ) as file:
+                #    pickle.dump( usepegraph, filehandler )
+                #
+                with open( 'drones_actual_paths.list', 'wb' ) as file:
+                    pickle.dump( self.recentpath, file )
+                #
+                with open( 'conflict_pairs.list', 'wb' ) as file:
+                    pickle.dump( currentconf, file )
+                #
+                with open( 'conflict_pairs_cpa_location.list', 'wb' ) as file:
+                    pickle.dump( currentconf_loc, file )
+                #
+                with open( 'conflict_pairs_headings.list', 'wb' ) as file:
+                    pickle.dump( currentconf_hdg, file )
+                #
+                # print( 'Saved.' )
+            '''
+
+            '''Update rules'''
+
+            wind_file = usepeconfig['Segmentation service']['wind_path']
+
+
             self.segmentation_service.update_wind_strat( wind_file, False )  # strategic update rules based on wind data
             # self.segmentation_service.update_wind_tact(flight_plan, flight_log, city_graph) # not yet implemented
             updated = True
@@ -724,7 +740,7 @@ class UsepeFlightPlan( core.Entity ):
         segments_df = usepesegments.segments
         while not self.flight_plan_df_buffer[self.flight_plan_df_buffer['planned_time_s'] <= sim.simt].empty:
             df_row = self.flight_plan_df_buffer.iloc[[0]]
-            print( df_row )
+            # print( df_row )
 
             row = df_row.iloc[0]
             orig = [row['origin_lon'], row['origin_lat'], row['origin_alt'] ]
@@ -749,6 +765,9 @@ class UsepeFlightPlan( core.Entity ):
                 segment_name_f = 'N/A'
             else:
                 segment_name_f = segments_df[cond].index[0]
+
+            # print( usepesegments.segments['class'][segment_name_0] )
+            # print( usepesegments.segments['class'][segment_name_f] )
 
             if ( usepesegments.segments['speed_max'][segment_name_0] == 0 ) | ( usepesegments.segments['speed_max'][segment_name_f] == 0 ):
                 # origin or destination is not allowed, so the flight plan is rejected
