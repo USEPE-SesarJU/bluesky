@@ -7,6 +7,7 @@ import datetime
 import math
 import os
 import pickle
+import time
 
 import configparser
 
@@ -112,30 +113,55 @@ def update():
         stack.stack( 'RESET' )
         stack.stack( 'QUIT' )
 
+    start = time.time()
     usepegraph.update()
     # print( ' - Graph updated - ' )
+    end_graph = time.time()
     usepesegments.update()
     # print( ' - Segments updated - ' )
+    end_segm = time.time()
     usepestrategic.update()
     # print( ' - Strategic deconfliction updated - ' )
+    end_strat = time.time()
     usepeflightplans.update()
     # print( ' - Flight plan updated - ' )
+    end_flight = time.time()
     usepedronecommands.update()
     # print( ' - Commands updated - ' )
+    end_commands = time.time()
+    print( 'The elapsed time UPDATE is:\n - graph update: {}\n - segmentation update: {}\n\
+         - strategic update: {}\n - flight plan update: {}\n - commands update: {}'.format( end_graph - start,
+                                                                                           end_segm - start,
+                                                                                           end_strat - start,
+                                                                                           end_flight - start,
+                                                                                           end_commands - start ) )
     return
 
 
 def preupdate():
+    start = time.time()
     usepegraph.preupdate()
     # print( ' - Graph pre-updated - ' )
+    end_graph = time.time()
     usepesegments.preupdate()
     # print( ' - Segments pre-updated - ' )
+    end_segm = time.time()
     usepestrategic.preupdate()
     # print( ' - Strategic deconfliction pre-updated - ' )
+    end_strat = time.time()
     usepeflightplans.preupdate()
     # print( ' - Flight plan pre-updated - ' )
+    end_flight = time.time()
     usepedronecommands.preupdate()
     # print( ' - Commands pre-updated - ' )
+    end_commands = time.time()
+    print( 'The elapsed time PREUPDATE is:\n - graph preupdate: {}\n - segmentation preupdate: {}\n\
+         - strategic preupdate: {}\n - flight plan preupdate: {}\n - commands preupdate: {}'.format( end_graph - start,
+                                                                                                    end_segm - start,
+                                                                                                    end_strat - start,
+                                                                                                    end_flight - start,
+                                                                                                    end_commands - start ) )
+
     return
 
 
