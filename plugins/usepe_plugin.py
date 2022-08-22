@@ -17,7 +17,7 @@ from bluesky.traffic.asas.detection import ConflictDetection
 from bluesky.traffic.asas.statebased import StateBased
 from usepe.city_model.dynamic_segments import dynamicSegments
 from usepe.city_model.scenario_definition import createFlightPlan, createDeliveryFlightPlan, createSurveillanceFlightPlan
-from usepe.city_model.strategic_deconfliction import initialPopulation, deconflictedPathPlanning, deconflictedDeliveryPathPlanning
+from usepe.city_model.strategic_deconfliction import initialPopulation, deconflictedPathPlanning, deconflictedDeliveryPathPlanning, deconflictedSurveillancePathPlanning
 from usepe.city_model.utils import read_my_graphml, layersDict
 import numpy as np
 import pandas as pd
@@ -491,6 +491,12 @@ class UsepeStrategicDeconfliction( core.Entity ):
                                                                            copy.deepcopy( usepesegments.segments ),
                                                                            usepeconfig, ac, hovering_time=30,
                                                                            only_rerouting=False )
+        elif ac['purpose'] == 'surveillance':
+            users, route, delayed_time = deconflictedSurveillancePathPlanning(orig, dest, dest, orig,
+                                            departure_time, usepegraph.graph, self.users,
+                                            self.initial_time, self.final_time,
+                                            copy.deepcopy(usepesegments.segments), usepeconfig,
+                                            ac, only_rerouting=False, wait_time=row['operation_duration'])
         else:
             users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
                                                                    usepegraph.graph, self.users,

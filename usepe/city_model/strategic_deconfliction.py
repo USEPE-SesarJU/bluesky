@@ -410,6 +410,42 @@ def deconflictedDeliveryPathPlanning( orig1, dest1, orig2, dest2, time, G, users
     return users2, [route1, route2], delayed_time1
 
 
+def deconflictedSurveillancePathPlanning(orig1, dest1, orig2, dest2, departure_time, G, users, initial_time,
+                                        final_time, segments, config, ac, only_rerouting=False, wait_time=600):
+    """
+    This function
+
+    Args:
+        - orig (list): Coordinates of origin [longitude, latitude]
+        - dest (list): Coordinates of destination [longitude, latitude]
+        - departure_time (int): Departure time in seconds, relative to initial_time
+        - G (graph): Graph representing the area
+        - users (dict): Information on how segments are populated for the entire duration
+        - initial_time (int): Initial time of simulation in seconds
+        - final_time (int): Final time of simulation in seconds
+        - segments (dict): Segment information
+        - config (Config): Configuration of the simulation
+        - ac (dict): Aircraft parameters
+        - only_rerouting (Boolean): True if rerouting an existing plan
+        - wait_time (int): How long before making the return trip after arrival
+
+    Returns:
+        - users2 (dict): Information on how segments are populated for the entire duration, including this latest flight
+        - route (list): Waypoints of the optimal route, for both trips
+        - delayed_time1 (int): Delay of the flight (first trip) in seconds
+    """
+
+    users1, route1, delayed_time1, departure2 = deconflictedPathPlanning(orig1, dest1, departure_time, G,
+                                                    users, initial_time, final_time, segments, config,
+                                                    ac, only_rerouting=only_rerouting, delivery=True,
+                                                    hovering_time=wait_time)
+
+    users2, route2, _ = deconflictedPathPlanning(orig2, dest2, departure2, G, users1,
+                                        initial_time, final_time, segments, config, ac, only_rerouting=True)
+
+    return users2, [route1, route2], delayed_time1
+
+
 def deconflcitedScenario( orig, dest, ac, departure_time, G, users, initial_time, final_time,
                           segments, layers_dict, scenario_file, config ):
     """
