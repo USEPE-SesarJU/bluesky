@@ -12,6 +12,7 @@ import os
 import random
 import string
 import sys
+from pathlib import Path
 
 from pyproj import Transformer
 
@@ -1166,7 +1167,7 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
 
     file_name = 'background_traffic_' + str( density ).replace( '.', '-' ) + '_' + str( int( avg_flight_duration ) ) + '_' + str( simulation_time ) + '.csv'
 
-    path = sys.path[0] + '\\data\\' + file_name
+    path = Path(sys.path[0], 'data', file_name)
 
     data_frame.to_csv( path )
 
@@ -1271,6 +1272,99 @@ def createDeliveryCSV( departure_times, frequencies, uncertainties, distributed,
     data_frame.to_csv( path )
 
     print( 'Delivery drones stored in : {0}'.format( path ) )
+
+
+def createSurveillanceCSV(origins, destinations, departure_times, drone_models, operation_ids, operation_durations, simulation_time):
+    """
+    This function creates the csv with the flight plan data of surveillance drones.
+
+    Args:
+        - origins:              Origin information, type: list,
+                                1 tuple per drone containing latitude, longitude and altitude
+                                (lat, lon, alt), type: float
+        - destinations:         Destination information, type: list,
+                                1 tuple per drone containing latitude, longitude and altitude
+                                (lat, lon, alt), type: float
+        - departure_times:      Departure times in seconds, type: list,
+                                1 integer per drone.
+        - drone_models:         Drone models, type: list,
+                                1 string per drone.
+        - operation_ids:        Operation IDs, type: list,
+                                1 string per drone.
+        - operation_durations:  Operation durations in seconds, type: list
+                                1 integer per drone
+        - simulation_time:      Duration of simulation in seconds, type: int
+
+        All lists must be equal length.
+
+    Output:
+        - Flight plan (.csv)
+    """
+
+    # Verify all lists are equal length
+    if not(len(origins) == len(destinations) == len(departure_times) == len(drone_models)):
+        raise ValueError('All lists provided must be of equal length.')
+
+    # Data to be included in the CSV file
+    data = { 'origin_lat': [], 'origin_lon': [], 'origin_alt': [],
+             'destination_lat': [], 'destination_lon': [], 'destination_alt': [],
+             'departure': [],
+             'departure_s': [],
+             'drone': [],
+             'purpose': [],
+             'operation_id': [],
+             'operation_duration': [],
+             'planned_time_s': []}
+
+    for i in range(len(origins)):
+        print(f'Creating flight plan with origin: ({origins[i][0]}, {origins[i][1]}) and destination: ({destinations[i][0]}, {destinations[i][1]})')
+        planSurveillanceDrone(origins[i], destinations[i], departure_times[i], drone_models[i], operation_ids[i], operation_durations[i], data)
+
+    data_frame = pd.DataFrame(data)
+
+    file_name = 'surveillance_' + \
+        str(departure_times).replace( '[', '' ).replace( ']', '' ).replace( ', ', '-' ) + \
+        '_' + str(simulation_time) + '.csv'
+
+    path = Path(sys.path[0], 'data', file_name)
+
+    data_frame.to_csv(path)
+
+    print(f'Delivery drones stored in: {path}')
+
+
+def planSurveillanceDrone(orig, dest, departure_time, drone_model, operation_id, operation_duration, data):
+    """
+    This function takes information on the flight of 1 surveillance drone and adds a planning time.
+
+    Args:
+        - orig:               Origin information, type: tuple
+                              (latitude, longitude, altitude), type: float
+        - dest:               Destination information, type: tuple
+                              (latitude, longitude, altitude), type: float
+        - departure_time:     Departure time in seconds, type: int
+        - drone_model:        Drone model, type: string
+        - operation_id:       Operation ID, type: string
+        - operation_duration: Operation duration in seconds, type: int
+        - data:               Stores all the flight plans, type: dict
+    """
+    (orig_lat, orig_lon, orig_alt) = orig
+    (dest_lat, dest_lon, dest_alt) = dest
+
+    # Flight plan must be submitted 10 min before departure
+    submit_flight_plan = 10 * 60
+
+    addFlightData(orig_lat, orig_lon, orig_alt,
+                  dest_lat, dest_lon, dest_alt,
+                  departure_time,
+                  drone_model,
+                  'surveillance',
+                  departure_time - submit_flight_plan,
+                  data)
+
+    data['operation_id'].append(operation_id)
+    data['operation_duration'].append(operation_duration)
+
 
 def createScenarioCSV( density, avg_flight_duration, departure_times, frequencies, simulation_time, G, segments, config ):
     '''
