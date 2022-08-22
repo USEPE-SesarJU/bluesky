@@ -8,6 +8,7 @@ import datetime
 import math
 import os
 import pickle
+from pathlib import Path
 
 from bluesky import core, traf, stack, sim  # , settings, navdb,  scr, tools
 from bluesky.tools import geo
@@ -15,7 +16,7 @@ from bluesky.tools.aero import nm
 from bluesky.traffic.asas.detection import ConflictDetection
 from bluesky.traffic.asas.statebased import StateBased
 from usepe.city_model.dynamic_segments import dynamicSegments
-from usepe.city_model.scenario_definition import createFlightPlan, createDeliveryFlightPlan
+from usepe.city_model.scenario_definition import createFlightPlan, createDeliveryFlightPlan, createSurveillanceFlightPlan
 from usepe.city_model.strategic_deconfliction import initialPopulation, deconflictedPathPlanning, deconflictedDeliveryPathPlanning
 from usepe.city_model.utils import read_my_graphml, layersDict
 import numpy as np
@@ -50,7 +51,7 @@ def init_plugin():
 
     # ---------------------------------- DEFINED BY USER ------------------------------------
     # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\settings_exercise_1_reference.cfg"
-    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
+    config_path = r"/home/ror/ws/scenarios/scenario/USEPE/exercise_3/settings_exe_3_ref.cfg"
     # ------------------------------------------------------------------------------------------
 
     # graph_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\testing_graph.graphml"
@@ -77,7 +78,7 @@ def init_plugin():
     usepedronecommands = UsepeDroneCommands()
 
     # Activate the detection and resolution method, and logger
-    configuration_path = r".{}".format( usepeconfig['BlueSky']['configuration_path'] )
+    configuration_path = r"{}".format( usepeconfig['BlueSky']['configuration_path'] )
     stack.stack( 'PCALL {} REL'.format( configuration_path ) )
     stack.stack( 'OP' )
 
@@ -414,9 +415,10 @@ class UsepeStrategicDeconfliction( core.Entity ):
         self.final_time = final_time
         self.users = initialPopulation( usepesegments.segments, self.initial_time, self.final_time )
 
-        # TODO: to include more drone purposes (e.g., surveillance, emergency, etc.)
+        # TODO: to include more drone purposes (e.g. emergency, etc.)
         self.delivery_drones = 0
         self.background_drones = 0
+        self.surveillance_drones = 0
 
     def initialisedUsers( self ):
         """
@@ -450,11 +452,14 @@ class UsepeStrategicDeconfliction( core.Entity ):
         else:
             # TODO: add more purposes
             if row['purpose'] == 'delivery':
-                name = row['purpose'].upper() + str( self.delivery_drones )
                 self.delivery_drones += 1
+                name = row['purpose'].upper() + str( self.delivery_drones )
             elif row['purpose'] == 'background':
-                name = row['purpose'].upper() + str( self.background_drones )
                 self.background_drones += 1
+                name = row['purpose'].upper() + str( self.background_drones )
+            elif row['purpose'] == 'surveillance':
+                self.surveillance_drones += 1
+                name = row['purpose'].upper() + str(self.surveillance_drones)
 
         # TODO: add all the drone types or read the information directly from BlueSky parameters
         if row['drone'] == 'M600':
@@ -470,8 +475,13 @@ class UsepeStrategicDeconfliction( core.Entity ):
             vs_max = 6
             safety_volume_size = 1
 
+        # operation_id used when a premade scenario has been created to be later inserted during the flight
+        op_id = None
+        if 'operation_id' in row.keys():
+            op_id = row['operation_id']
+
         ac = {'id': name, 'type': row['drone'], 'accel': 3.5, 'v_max': v_max, 'vs_max': vs_max,
-              'safety_volume_size': safety_volume_size, 'purpose': row['purpose']}
+              'safety_volume_size': safety_volume_size, 'purpose': row['purpose'], 'op_id': op_id}
 
         if ac['purpose'] == 'delivery':
             users, route, delayed_time = deconflictedDeliveryPathPlanning( orig, dest, dest, orig,
@@ -597,18 +607,22 @@ class UsepeDroneCommands( core.Entity ):
         G = usepegraph.graph
         layers_dict = usepegraph.layers_dict
 
-        scenario_path = r'.\scenario\usepe\temp\scenario_traffic_drone_{}.scn'.format( ac['id'] )
-        scenario_file = open( scenario_path, 'w' )
+        scenario_name = f'scenario_traffic_drone_{ac["id"]}.scn'
+        scenario_path = Path('USEPE/temp', scenario_name)
+        scenario_file = open(Path('scenario', scenario_path), 'w')
 
-        if ac['purpose'] == 'delivery':
+        if ac['purpose'] == 'delivery': #TODO Conform to new scenario path
             createDeliveryFlightPlan( route[0], route[1], ac, departure_time, G, layers_dict,
                                       scenario_file, scenario_path, hovering_time=30 )
+        elif ac['purpose'] == 'surveillance':
+            premade_scenario_path = Path('USEPE', 'exercise_3', 'surveillance_' + ac['op_id'] + '.scn')
+            createSurveillanceFlightPlan(route[0], route[1], ac, departure_time, G, layers_dict, scenario_file, scenario_path, premade_scenario_path)
         else:
             createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
 
         scenario_file.close()
 
-        stack.stack( 'PCALL {} REL'.format( '.' + scenario_path[10:] ) )
+        stack.stack(f'PCALL {scenario_path} REL')
 
     def rerouteDrone( self, acid ):
         """

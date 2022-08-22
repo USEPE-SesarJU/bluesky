@@ -6,6 +6,7 @@
 import configparser
 import copy
 import datetime
+from io import TextIOWrapper
 import json
 import math
 import os
@@ -979,6 +980,99 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
         new_line0 = '{0} > {1} AT {2} DO {3} ATALT {4}, DEL {5}'.format( 
             departure_time, ac['id'], state['ref_wpt'], ac['id'], layers_dict[route2[-1][0]] * m2ft, ac['id'] )
         scenario_file_return.write( new_line0 + '\n' )
+
+    scenario_file_return.close()
+
+
+def createSurveillanceFlightPlan(route1, route2, ac, departure_time, G: MultiDiGrpah3D, layers_dict,
+                                 scenario_file: TextIOWrapper, scenario_path: Path, premade_scenario_path):
+    """
+    Create a flight plan for a surveillance drone. All the commands are written in a text file.
+
+    Args:
+        - route1 (list): Waypoins of the route to the operation area
+        - route2 (list): Waypoins of the return route
+        - ac (dictionary): Aircraft parameters {id, type, accel, v_max, vs_max, safety_volume_size, purpose}
+        - departure_time (string): The departure time
+        - G (graph): Graph of the area simulated
+        - layers_dict (dictionary): Information about layers and altitudes
+        - scenario_file (object): Text file object where the commands are written
+        - scenario_path (Path): The path to the surveillance scenario
+        - premade_scenario_path (Path): The path to the premade surveillance operation scenario
+    """
+    print(f'Creating surveillance flight plan for {ac["id"]}...')
+
+    return_path = scenario_path.with_name(scenario_path.stem + '_return.scn')
+    m2ft = 3.281 #TODO These should be constants
+    m_s2knot = 1.944
+    m_s2ft_min = 197
+
+    state ={}
+    state['action'] = None
+    route_parameters = routeParameters(G, route1, ac)
+
+    for i in range(len(route1) - 1):
+        state = createInstructionV3(
+            scenario_file, route_parameters, i, ac, G, layers_dict, departure_time, state)
+
+    new_lines = []
+
+    if state['action'] == 'cruise':
+        new_lines.append(f'{departure_time}> DEFWPT {route1[-1]}, ' +
+            f'{G.nodes[route1[-1]]["y"]}, {G.nodes[route1[-1]]["x"]}')
+
+        new_lines.append(f'{departure_time}> ADDWPT {ac["id"]}, {route1[-1]}, ' +
+            f'{str(route_parameters[str(len(route1) - 2)]["speed"] * m_s2knot)}')
+
+        new_lines.append(f'{departure_time}> {ac["id"]} ATDIST {route1[-1]} ' +
+            f'0.03 SPD {ac["id"]} 5')
+
+        new_lines.append(f'{departure_time}> {ac["id"]} ATDIST {route1[-1]} ' +
+            f'0.001 SPD {ac["id"]} 0')
+
+        new_lines.append(f'{departure_time}> {ac["id"]} ATDIST {route1[-1]} 0.001 ' +
+            f'{ac["id"]} ATSPD 0, DELAY 5 PCALL {premade_scenario_path} {ac["id"]} {return_path} REL')
+
+    elif state['action'] == 'climbing':
+        new_lines.append(f'{departure_time}> {ac["id"]} AT {state["ref_wpt"]} ' +
+            f'DO {ac["id"]} ATALT {layers_dict[route1[-1][0]] * m2ft}, VS {ac["id"]} 0')
+
+        new_lines.append(f'{departure_time}> {ac["id"]} AT {route1[-1]} DO ' +
+            f'{ac["id"]} ATALT {layers_dict[route1[-1][0] * m2ft]}, DELAY 5 ' +
+            f'PCALL {premade_scenario_path} {ac["id"]} {return_path} REL')
+
+    for i in range(len(new_lines)):
+        scenario_file.write(new_lines[i] + '\n')
+
+    scenario_file_return = open(Path('scenario', return_path), 'w')
+    state = {}
+    state['action'] = None
+    route_parameters = routeParameters(G, route2, ac)
+
+    # Redefine departure time for the return trip as relative to the previous stretch
+    departure_time = '00:00:00.00'
+
+    for i in range(len(route2) -1):
+        state = createInstructionV3(
+            scenario_file_return, route_parameters, i, ac, G, layers_dict, departure_time, state)
+
+    new_lines = []
+    if state['action'] == 'cruise':
+        new_lines.append(f'{departure_time}> DEFWPT {route2[-1]}, ' +
+            f'{G.nodes[route2[-1]]["y"]}, {G.nodes[route2[-1]]["x"]}')
+
+        new_lines.append(f'{departure_time}> ADDWPT {ac["id"]} {route2[-1]}, , ' +
+            f'{str(route_parameters[str(len(route2) - 2)]["speed"] * m_s2knot)}')
+
+        new_lines.append(f'{departure_time}> {ac["id"]} ATDIST {route2[-1]} ' +
+            f'0.003 DEL {ac["id"]}')
+
+    elif state['action'] == 'climbing':
+        new_lines.append(f'{departure_time}> {ac["id"]} AT {state["ref_wpt"]} ' +
+            f'DO {ac["id"]} ATALT {layers_dict[route2[-1][0]] * m2ft}, DEL {ac["id"]}')
+
+    for i in range(len(new_lines)):
+        scenario_file_return.write(new_lines[i] + '\n')
 
     scenario_file_return.close()
 
