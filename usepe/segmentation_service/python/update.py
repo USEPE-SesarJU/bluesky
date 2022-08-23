@@ -3,7 +3,7 @@ from datetime import datetime
 import hvplot
 import hvplot.pandas
 
-from usepe.segmentation_service.python.lib import misc
+from usepe.segmentation_service.python.lib2 import misc
 import geopandas as gpd
 import xarray as xr
 
