@@ -1,6 +1,6 @@
 import os
-
-from usepe.segmentation_service.python.lib import openair
+# from python.utils import openair
+from usepe.segmentation_service.python.utils import openair
 import geopandas as gpd
 import osmnx as ox
 import pandas as pd

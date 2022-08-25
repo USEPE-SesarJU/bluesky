@@ -1,3 +1,6 @@
+import cmath
+import json
+import math
 from datetime import datetime
 from heapq import nlargest
 import json
@@ -11,25 +14,23 @@ import geopandas as gpd
 import numpy as np
 import xarray as xr
 
-
-def split_cell( segments, idx, splitter, keepParent=True, min_grid=1.0 ):
-    """Divide the cell at idx using either a supplied splitter geometry or direction (x|y)"""
-    cells = segments.copy()
-    selected = cells.loc[idx]
+def split_cell(segments, iid, splitter, keepParent=True, min_grid=1e-8):
+    """Divide the cell at iid using either a supplied splitter geometry or direction (x|y)"""
+    selected = segments.loc[iid]
 
     # Prepare the pre-defined splitter if a direction was given
     if splitter in ["x", "y"]:
         x = selected.geometry.exterior.bounds[0::2]
         y = selected.geometry.exterior.bounds[1::2]
         if splitter == "x":
-            splitter = LineString( 
+            split_line = LineString(
                 [
                     Point( min( x ), np.round( ( sum( y ) / 2 ) / min_grid ) * min_grid ),
                     Point( max( x ), np.round( ( sum( y ) / 2 ) / min_grid ) * min_grid ),
                 ]
             )
         elif splitter == "y":
-            splitter = LineString( 
+            split_line = LineString(
                 [
                     Point( np.round( ( sum( x ) / 2 ) / min_grid ) * min_grid, min( y ) ),
                     Point( np.round( ( sum( x ) / 2 ) / min_grid ) * min_grid, max( y ) ),
@@ -37,76 +38,119 @@ def split_cell( segments, idx, splitter, keepParent=True, min_grid=1.0 ):
             )
 
     # Perform the split and update the cell dataframe while creating the necessary links between parents and children
-    divided = split( selected.geometry, splitter )
+    divided = split(selected.geometry, split_line)
+    if splitter in ["x", "y"]:
+        if (splitter == "x" and (divided.geoms[0].bounds[1] > divided.geoms[1].bounds[1])) or (
+            splitter == "y" and (divided.geoms[0].bounds[0] > divided.geoms[1].bounds[0])
+        ):
+            div_range = reversed(range(len(divided.geoms)))
+        else:
+            div_range = range(len(divided.geoms))
+
     floor_ceil = 0
-    for idx_rect in range( len( divided.geoms ) ):
-        new_cell = selected.copy()
-        new_idx = len( segments.index ) + idx_rect
-        new_cell["parent"] = idx
-        new_cell["geometry"] = divided.geoms[idx_rect]
-        new_cell["capacity"] = ( 
-            new_cell["capacity"] * new_cell["geometry"].area / selected["geometry"].area
+    for idx_rect in div_range:
+        new_cell = segments.loc[iid].copy()
+        new_id = segments.index.max() + 1
+        if new_cell.at["parent"] is None:
+            new_cell.at["parent"] = [iid]
+        else:
+            new_cell.at["parent"] = new_cell.at["parent"] + [iid]
+        # new_cell["parent"] = iid
+        new_cell.at["geometry"] = divided.geoms[idx_rect]
+        new_cell.at["capacity"] = (
+            new_cell.at["capacity"] * new_cell["geometry"].area / selected["geometry"].area
         )
         if floor_ceil:
-            new_cell["capacity"] = math.ceil( new_cell["capacity"] )
+            new_cell.at["capacity"] = math.ceil(new_cell["capacity"])
         else:
-            new_cell["capacity"] = math.floor( new_cell["capacity"] )
+            new_cell.at["capacity"] = math.floor(new_cell["capacity"])
 
-        cells.loc[new_idx] = new_cell
-        if cells.loc[idx, "children"] is None:
-            cells.loc[idx, "children"] = [[new_idx]]
+        segments.loc[new_id] = new_cell
+        if segments.loc[iid, "children"] is None:
+            segments.loc[iid, "children"] = [new_id]
         else:
-            cells.loc[idx, "children"].append( new_idx )
+            segments.loc[iid, "children"].append(new_id)
         floor_ceil ^= 1
 
     if not keepParent:
-        cells = cells.drop( idx )
-        cells = cells.reset_index( drop=True )
-    return cells
+        segments = segments.drop(iid)
+        # cells = cells.reset_index(drop=True)
+    return segments
 
 
-def split_alt( segments, idx, splitter, keepParent=True ):
-    cells = segments.copy()
-    selected = cells.loc[idx]
+def split_alt(segments, iid, splitter, keepParent=True):
+    selected = segments.loc[iid]
     if splitter == "z":
-        splitter = ( selected.z_max - selected.z_min ) / 2.0
+        splitter = (selected.z_max - selected.z_min) / 2.0
 
     # Perform the split and update the cell dataframe while creating the necessary links between parents and children
     floor_ceil = 0
-    for idx_rect in range( 2 ):
-        new_cell = selected.copy()
-        new_idx = len( segments.index ) + idx_rect
-        new_cell["parent"] = idx
+    for idx_rect in range(2):
+        new_cell = segments.loc[iid].copy()
+        new_id = segments.index.max() + 1
+        if new_cell.at["parent"] is None:
+            new_cell["parent"] = [iid]
+        else:
+            new_cell.at["parent"] = new_cell.at["parent"] + [iid]
+        # new_cell["parent"] = iid
         if floor_ceil:
             new_cell["z_min"] = splitter
-            new_cell["capacity"] = math.ceil( 
+            new_cell["capacity"] = math.ceil(
                 new_cell["capacity"]
                 * ( new_cell["z_max"] - new_cell["z_min"] )
                 / ( selected["z_max"] - selected["z_min"] )
             )
         else:
             new_cell["z_max"] = splitter
-            new_cell["capacity"] = math.floor( 
+            new_cell["capacity"] = math.floor(
                 new_cell["capacity"]
                 * ( new_cell["z_max"] - new_cell["z_min"] )
                 / ( selected["z_max"] - selected["z_min"] )
             )
 
-        cells.loc[new_idx] = new_cell
-        if cells.loc[idx, "children"] is None:
-            cells.loc[idx, "children"] = [[new_idx]]
+        segments.loc[new_id] = new_cell
+        if segments.loc[iid, "children"] is None:
+            segments.loc[iid, "children"] = [new_id]
         else:
-            cells.loc[idx, "children"].append( new_idx )
+            segments.loc[iid, "children"].append(new_id)
         floor_ceil ^= 1
 
     if not keepParent:
-        cells = cells.drop( idx )
-        cells = cells.reset_index( drop=True )
+        segments = segments.drop(iid)
+        # segments = segments.reset_index(drop=True)
 
-    return cells
+    return segments
 
 
-def split_aspect_ratio( cells, rules ):
+def merge_cells(segments, id_parent):
+
+    aggFuncDict = dict.fromkeys(segments, "first")
+    aggFuncDict.pop("geometry")
+    aggFuncDict["z_min"] = "min"
+    aggFuncDict["z_max"] = "max"
+    aggFuncDict["speed_min"] = "max"
+    aggFuncDict["speed_max"] = "min"
+    aggFuncDict["capacity"] = "sum"
+    aggFuncDict["occupancy"] = "sum"
+    aggFuncDict["conflicts"] = "sum"
+    aggFuncDict["wind_avg"] = "mean"
+    aggFuncDict["wind_max"] = "max"
+    aggFuncDict["turbulence"] = "max"
+    aggFuncDict["parent"] = lambda s: s.iat[0][0:-1] if s.iat[0] != None else s.iat[0]
+
+    segments["dissolve"] = segments.index
+    for iid in segments.index:
+        if segments.at[iid, "parent"] != None:
+            log_ii = np.array(id_parent) == segments.at[iid, "parent"][-1]
+            if any(log_ii):
+                segments.at[iid, "dissolve"] = np.array(id_parent)[log_ii][0]
+    # "name": lambda s: "; ".join(set(filter(lambda x: x != "nan", s))),
+    segments = segments.dissolve(by="dissolve", aggfunc=aggFuncDict, sort=False)
+    segments.index.name = ""
+    return segments
+
+
+def split_aspect_ratio(cells, rules):
     # split cells to achieve minimal aspect ratio
     # it might seem a good idea to split each segment as many times as required
     # but that is approximatelly two times slower than this approach
@@ -118,34 +162,32 @@ def split_aspect_ratio( cells, rules ):
     notEmpty = True
     while notEmpty:
         aspect = []
-        idx = []
-        for ii in range( len( cells ) ):
-            x, y = cells.loc[ii].geometry.exterior.coords.xy
-            if ( max( y ) - min( y ) ) > 2.0 * min_grid:
-                aspect.append( ( max( x ) - min( x ) ) / ( max( y ) - min( y ) ) )
+        for id in cells.index:
+            x, y = cells.loc[id].geometry.exterior.coords.xy
+            if (max(y) - min(y)) > 2.0 * min_grid:
+                aspect.append((max(x) - min(x)) / (max(y) - min(y)))
             else:
                 aspect.append( 1e10 )
 
-        idx = [iidx for iidx in range( len( aspect ) ) if ( ( 1.0 / aspect[iidx] ) >= maxAspect )]
+        idx = [cells.index[ii] for ii in range(len(aspect)) if ((1.0 / aspect[ii]) >= maxAspect)]
 
-        if len( idx ) != 0:
-            for ii in range( len( idx ) ):
-                cells = split_cell( cells, idx[ii] - ii, "x", False, min_grid )
+        if len(idx) != 0:
+            for ii in range(len(idx)):
+                cells = split_cell(cells, idx[ii], "x", False, min_grid)
 
         aspect = []
-        idy = []
-        for ii in range( len( cells ) ):
-            x, y = cells.loc[ii].geometry.exterior.coords.xy
-            if ( max( x ) - min( x ) ) > 2.0 * min_grid:
-                aspect.append( ( max( x ) - min( x ) ) / ( max( y ) - min( y ) ) )
+        for id in cells.index:
+            x, y = cells.loc[id].geometry.exterior.coords.xy
+            if (max(x) - min(x)) > 2.0 * min_grid:
+                aspect.append((max(x) - min(x)) / (max(y) - min(y)))
             else:
                 aspect.append( 1e-10 )
 
-        idy = [iidy for iidy in range( len( aspect ) ) if ( ( aspect[iidy] ) > maxAspect )]
+        idy = [cells.index[ii] for ii in range(len(aspect)) if ((aspect[ii]) > maxAspect)]
 
-        if len( idy ) != 0:
-            for ii in range( len( idy ) ):
-                cells = split_cell( cells, idy[ii] - ii, "y", False, min_grid )
+        if len(idy) != 0:
+            for ii in range(len(idy)):
+                cells = split_cell(cells, idy[ii], "y", False, min_grid)
 
         if len( idx ) == 0 & len( idy ) == 0:
             notEmpty = False
@@ -153,19 +195,14 @@ def split_aspect_ratio( cells, rules ):
     return cells
 
 
-def split_build( cells, building_layer ):
-    kk = 0
-    for ii in range( len( cells ) ):
-        if ( 
-            ( cells.at[kk, "z_min"] < building_layer )
-            & ( cells.at[kk, "z_max"] > building_layer )
-            & ( cells.at[kk, "capacity"] > 0 )
+def split_build(cells, building_layer):
+    for iid in cells.index:
+        if (
+            (cells.at[iid, "z_min"] < building_layer)
+            & (cells.at[iid, "z_max"] > building_layer)
+            & (cells.at[iid, "capacity"] > 0)
         ):
-            cells = split_alt( 
-                cells, kk, building_layer, False
-            )  # kk -> erasing the parent and addinf chindren at the end
-        else:
-            kk += 1
+            cells = split_alt(cells, iid, building_layer, False)
 
     return cells
 
@@ -173,7 +210,7 @@ def split_build( cells, building_layer ):
 def cells2file( cells, file ):
     # when saving to GeoJSON cells cannot contain lists
     # only "children" can contain list of cell's children -> children are forgotten before saving
-    for jj in range( len( cells ) ):
+    for jj in cells.index:
         if cells.loc[jj, "children"] is not None:
             cells.loc[jj, "children"] = None
     cells.to_file( file, driver="GeoJSON" )
@@ -201,7 +238,7 @@ def update_wind( cells, windData, interp_UTM=False ):
 
     # # calculate scalar wind speed from staggered wind velocities
     # # scalar values in grid center -> interpolate into the grid center
-    windData["speed"] = np.sqrt( 
+    windData["speed"] = np.sqrt(
         np.power( windData["u"].interp( y=windData.coords["yv"], zu_3d=windData.coords["zw_3d"] ), 2 )
         +np.power( 
             windData["v"].interp( x=windData.coords["xu"], zu_3d=windData.coords["zw_3d"] ), 2
@@ -217,7 +254,7 @@ def update_wind( cells, windData, interp_UTM=False ):
         windSpeed_interp = np.empty( ( nAlt, nLon, nLat ) )
         for ii in range( nAlt ):
             print( "interpolating for altitude number:", ii )
-            windSpeed_interp[ii, ...] = griddata( 
+            windSpeed_interp[ii, ...] = griddata(
                 ( windData["lat"].to_numpy().ravel(), windData["lon"].to_numpy().ravel() ),
                 windData["speed"].to_numpy()[ii,:,:].ravel(),
                 ( grid_lat, grid_lon ),
@@ -226,7 +263,7 @@ def update_wind( cells, windData, interp_UTM=False ):
         windLat = windData["lat"][:, midLat].to_numpy()
         windLon = windData["lon"][midLon,:].to_numpy()
 
-    # # zu_3d and zw_3d are both relative to the height level of origin_z. origin_z is the altitude above sea level.
+    ## zu_3d and zw_3d are both relative to the height level of origin_z. origin_z is the altitude above sea level.
     # windAlt = (windData["zu_3d"] + windData.origin_z).to_numpy()  # 0 m at sea level
     windAlt = ( windData["zu_3d"] ).to_numpy()  # 0 m at "ground" level
 
@@ -234,7 +271,7 @@ def update_wind( cells, windData, interp_UTM=False ):
     dLon = np.mean( np.diff( windLon ) )
     dAlt = np.mean( np.diff( windAlt ) )
 
-    for ii in cells.index:
+    for ii in range(len(cells)):
         lon_min = cells.geometry[ii].bounds[0]
         lat_min = cells.geometry[ii].bounds[1]
         lon_max = cells.geometry[ii].bounds[2]
@@ -242,7 +279,7 @@ def update_wind( cells, windData, interp_UTM=False ):
         alt_min = cells.z_min[ii]
         alt_max = cells.z_max[ii]
 
-        if ( 
+        if (
             ( lon_max > windLon[0] )
             & ( lon_min < windLon[-1] )
             & ( lat_max > windLat[0] )
@@ -312,7 +349,7 @@ def process_wind_data( wind_file, interp_UTM=False ):
 
     # # calculate scalar wind speed from staggered wind velocities
     # # scalar values in grid center -> interpolate into the grid center
-    windData["speed"] = np.sqrt( 
+    windData["speed"] = np.sqrt(
         np.power( windData["u"].interp( y=windData.coords["yv"], zu_3d=windData.coords["zw_3d"] ), 2 )
         +np.power( 
             windData["v"].interp( x=windData.coords["xu"], zu_3d=windData.coords["zw_3d"] ), 2
@@ -327,12 +364,12 @@ def process_wind_data( wind_file, interp_UTM=False ):
         windSpeed_interp = np.empty( ( nAlt, nLon, nLat ) )
         for ii in range( nAlt ):
             print( "interpolating for altitude number:", ii )
-            windSpeed_interp[ii, ...] = griddata( 
+            windSpeed_interp[ii, ...] = griddata(
                 ( windData["lat"].to_numpy().ravel(), windData["lon"].to_numpy().ravel() ),
                 windData["speed"].to_numpy()[ii,:,:].ravel(),
                 ( grid_lat, grid_lon ),
             )
-        windData["speed_interp"] = xr.DataArray( 
+        windData["speed_interp"] = xr.DataArray(
             windSpeed_interp,
             coords=[( windData["zu_3d"] ).data, windLon, windLat],
             dims=["alt_proc", "lat_proc", "lon_proc"],
@@ -346,7 +383,7 @@ def process_wind_data( wind_file, interp_UTM=False ):
         windLat = windData["lat"][:, midLat].to_numpy()
         windLon = windData["lon"][midLon,:].to_numpy()
 
-    # # zu_3d and zw_3d are both relative to the height level of origin_z. origin_z is the altitude above sea level.
+    ## zu_3d and zw_3d are both relative to the height level of origin_z. origin_z is the altitude above sea level.
     # windAlt = (windData["zu_3d"] + windData.origin_z).to_numpy()  # 0 m at sea level
     windAlt = ( windData["zu_3d"] ).to_numpy()  # 0 m at "ground" level
 
@@ -379,3 +416,20 @@ def load_rules( rule_file="usepe/segmentation_service/config/rules.json" ):
     with open( rule_file, "r" ) as tags_file:
         rules = json.load( tags_file )
     return rules
+
+
+class AnglRunAvg:
+    def __init__(self):
+        self.N = 0
+        self.angl = 0.0
+        self.rectSum = 0
+
+    def update_angle_rad(self, angl):
+        self.rectSum += cmath.rect(1, angl)
+        self.N += 1
+        self.angl = cmath.phase(self.rectSum / self.N)
+
+        return self.angl
+
+    def update_angl_deg(self, angl):
+        return math.degrees(self.update_angle_rad(math.radians(angl)))

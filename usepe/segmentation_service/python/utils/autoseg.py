@@ -2,8 +2,8 @@ import math
 
 from networkx.algorithms.components.connected import connected_components
 from shapely.geometry import Polygon, box
-
-from usepe.segmentation_service.python.lib import rectangles
+# from python.utils import rectangles
+from usepe.segmentation_service.python.utils import rectangles
 import geopandas as gpd
 import networkx as nx
 import pandas as pd
