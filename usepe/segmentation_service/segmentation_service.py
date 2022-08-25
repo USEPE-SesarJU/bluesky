@@ -10,7 +10,7 @@ from tqdm import tqdm
 import hvplot
 import hvplot.pandas
 
-from usepe.segmentation_service.python.lib2 import air, autoseg, ground, misc, polygons
+from usepe.segmentation_service.python.utils import air, autoseg, ground, misc, polygons
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import networkx as nx
