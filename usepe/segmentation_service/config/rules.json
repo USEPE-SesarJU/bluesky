@@ -11,7 +11,7 @@
 		"wind_data_folder": "./usepe/segmentation_service/data/wind/",
 		"wind_speed_th": 5.0, 
 		"turbulence_intensity_th": 0.4,
-		"path_dev_th": 1.41
+		"path_dev_th": 1e-7
 	},
 	"concentration_rules":{
 		"conflict_th_km_3_h": 1	

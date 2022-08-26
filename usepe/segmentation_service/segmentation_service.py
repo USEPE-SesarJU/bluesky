@@ -13,7 +13,7 @@ import osmnx as ox
 import pandas as pd
 import xarray as xr
 from numpy import NaN
-from shapely.geometry import Point
+from shapely.geometry import LineString, Point
 from tqdm import tqdm
 # from python.utils import air, autoseg, ground, misc, polygons
 from usepe.segmentation_service.python.utils import air, autoseg, ground, misc, polygons
@@ -321,9 +321,57 @@ class segmentationService:
         return
 
     def update_wind_tact(self, plan, log_pos, log_w, id, city):
+        print("Starting the tactical wind field dependency update.")
         # log_w ... log of active waypoints, actual drone goal
         # city.nodes["A21105471"]
+        cods = []
+        for ii in range(len(log_pos)):
+            for jj in range(len(log_pos[ii])):
+                if log_pos[ii][jj] != None:
+                    goal = city.nodes[log_pos[ii][jj][-1]]
+                    prev_goal = city.nodes[
+                        [
+                            plan[id[ii]][0][kk - 1]
+                            for kk in range(len(plan[id[ii]][0]))
+                            if (plan[id[ii]][0][kk] == log_pos[ii][jj][-1])
+                        ][0]
+                    ]
+                    traj = LineString(
+                        [
+                            Point(np.asarray((goal["x"], goal["y"], goal["z"])).astype(float)),
+                            Point(
+                                np.asarray(
+                                    (prev_goal["x"], prev_goal["y"], prev_goal["z"])
+                                ).astype(float)
+                            ),
+                        ]
+                    )
+                    # check if deviation larger than threshold
+                    if (
+                        traj.distance(
+                            Point(log_pos[ii][jj][2], log_pos[ii][jj][1], log_pos[ii][jj][3])
+                        )
+                        > self.rules["wind_rules"]["path_dev_th"]
+                    ):
+                        # dev_loc=(log_pos[ii][jj][2],log_pos[ii][jj][1],log_pos[ii][jj][3])
+                        cod = self.cells.sindex.query(
+                            Point(log_pos[ii][jj][2], log_pos[ii][jj][1]), predicate="within"
+                        )
+                        if len(cod) > 0:
+                            cod = [
+                                cod[ind]
+                                for ind in range(len(cod))
+                                if (
+                                    (log_pos[ii][jj][3] > self.cells.iloc[cod[ind]]["z_min"])
+                                    and (log_pos[ii][jj][3] < self.cells.iloc[cod[ind]]["z_max"])
+                                )
+                            ][0]
+                            cods.append(cod)
 
+        cods = list(set(cods))  # get unique
+        for ii in cods:
+            self.decrease_speed(self.cells.index[ii])
+        print("The tactical wind field dependency update DONE.")
         return
 
     def update_conflict(self, conflict_pairs, conflict_loc, conflict_head, dur_sec):
@@ -416,7 +464,15 @@ class segmentationService:
         return cells
 
     def traffic_split(self, flight_log_pos):
-        dur_sec = flight_log_pos[0][-1][0] - flight_log_pos[0][0][0]
+        dur_sec = len(flight_log_pos[0]) * np.mean(
+            np.diff(
+                [
+                    flight_log_pos[0][ii][0]
+                    for ii in range(len(flight_log_pos[0]))
+                    if flight_log_pos[0][ii] != None
+                ]
+            )
+        )
         # split cells with high occupancy to 8 sub-cells to test split rule
         for id in self.cells.index:
             if self.cells.at[id, "occupancy"] > 0:
@@ -638,12 +694,20 @@ if __name__ == "__main__":
     with open("usepe/segmentation_service/data/conflict/conflict_pairs_headings.list", "rb") as f:
         conflict_head = pickle.load(f)
 
-    conflict_log_dur_sec = flight_log_pos[0][-1][0] - flight_log_pos[0][0][0]
+    conflict_log_dur_sec = len(flight_log_pos[0]) * np.mean(
+        np.diff(
+            [
+                flight_log_pos[0][ii][0]
+                for ii in range(len(flight_log_pos[0]))
+                if flight_log_pos[0][ii] != None
+            ]
+        )
+    )
     # initialize airspace cells of the region specified in "region"
     segments = segmentationService(region)
 
     segments.update_wind_strat(windFile, False)  # strategic update rules based on wind data
-    # segments.update_wind_tact(flight_plan, flight_log_pos, flight_log_w, drone_id, city_graph)  # not yet implemented
+    segments.update_wind_tact(flight_plan, flight_log_pos, flight_log_w, drone_id, city_graph) 
     segments.update_conflict(conflict_pairs, conflict_loc, conflict_head, conflict_log_dur_sec)
     segments.update_traffic_strat(flight_log_pos)
     segments.update_traffic_tact(flight_log_pos)
