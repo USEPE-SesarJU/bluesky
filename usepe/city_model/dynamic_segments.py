@@ -215,6 +215,78 @@ def updateSegmentVelocity( G, segments ):
     return G
 
 
+def applyGeovectoringRule( df, segments, G ):
+    """
+    apply a Geovectoring rule to an edge
+
+    Args:
+        df (object): row of a dataframe
+        segments (dataframe): dataframe with the segment information
+        G (graph)
+
+    return
+        speed (float)
+    """
+
+    rule = segments[segments.index == df.segment]['geovect'].iloc[0]
+
+    O = df.name[0]
+    D = df.name[1]
+
+    lat_O = G.nodes[O]['y']
+    lat_D = G.nodes[D]['y']
+    lon_O = G.nodes[O]['x']
+    lon_D = G.nodes[D]['x']
+
+    if rule == 'N':
+        if lat_O > lat_D:
+            speed = 0
+    elif rule == 'S':
+        if lat_O < lat_D:
+            speed = 0
+    elif rule == 'E':
+        if lon_O > lon_D:
+            speed = 0
+    elif rule == 'W':
+        if lon_O < lon_D:
+            speed = 0
+    else:
+        speed = df.speed
+
+    return speed
+
+
+def updateGeovectoringRule( G, all_segments ):
+    """
+    Update the edge speed according to the new segmentation and the geovectoring rules: NSEW
+
+    Args:
+            G (graph): graph representing the city
+            segments (DataFrame): dataframe with the segment information
+    Returns:
+            G (graph): updated graph
+    """
+
+    segments = all_segments[all_segments['geovect'] != 'NSEW' ]
+    if segments.empty:
+        print( 'No geovectoring rules' )
+        return G
+    print( 'Updating segment velocity according to geovectoring rules...' )
+
+    updated_segments = list( segments.index )
+
+    edges = ox.utils_graph.graph_to_gdfs( G, nodes=False, fill_edge_geometry=False )
+
+    cond = ( edges['segment'].isin( updated_segments ) )
+
+    pd.set_option( 'mode.chained_assignment', None )
+    edges['speed'][cond] = edges[cond].apply( lambda x:
+                                              applyGeovectoringRule( x, segments, G ), axis=1 )
+
+    nx.set_edge_attributes( G, values=edges["speed"], name="speed" )
+    return G
+
+
 def addTravelTimes( G, precision=4 ):
     """
     Calculate the travel time of all the edges.
@@ -251,7 +323,7 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
     Args:
             G (graph): graph representing the city
             config (configuration file): configuration file with all the relevant information
-            segments (dictionary): dictionary with all the information about segments
+            segments (dataframe): dataframe with all the information about segments
             deleted_segments (list): a list containing the segments that has been deleted
 
     Returns:
@@ -286,6 +358,9 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
 
     # Update segment velocity
     G = updateSegmentVelocity( G, updated_segments )
+
+    # Update geovectoring rules
+    G = updateGeovectoringRule( G, segments_df )
 
     # Add travel times to the graph
     G = addTravelTimes( G )
