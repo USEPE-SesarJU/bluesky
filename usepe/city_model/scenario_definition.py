@@ -909,9 +909,12 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
 
     """
     print( 'Creating delivery flight plan of {0}...'.format( ac['id'] ) )
-    return_path = scenario_path[:-4] + '_return.scn'
+    return_path = scenario_path.with_name(scenario_path.stem + '_return.scn')
+
+    # TODO Remove return_path_rel if not needed
     return_path_rel = './' + '/'.join( scenario_path.split( '\\' )[4:] )
     return_path_rel = return_path_rel[:-4] + '_return.scn'
+
     m2ft = 3.281
     m_s2knot = 1.944
     m_s2ft_min = 197  # m/s to ft/min
@@ -936,7 +939,7 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
         new_line4 = '{0} > {1} AT {2} DO {3} ATSPD 0, DELAY {4} DEL {5}'.format( 
             departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time ), ac['id'] )
         new_line5 = '{0} > {1} AT {2} DO {3} ATSPD 0, DELAY {4} PCALL {5} REL '.format( 
-            departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time + 3 ), '.' + return_path[10:] )
+            departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time + 3 ), return_path )
 
         scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' + \
                              new_line3 + '\n' + new_line4 + '\n' + new_line5 + '\n' )
@@ -949,12 +952,12 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
             departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time ), ac['id'],
             layers_dict[route1[-1][0]] * m2ft )
         new_line2 = '{0} > {1} AT {2} DO {3} ATALT {6}, DELAY {4} PCALL {5} REL'.format( 
-            departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time + 3 ), '.' + return_path[10:],
+            departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time + 3 ), return_path,
             layers_dict[route1[-1][0]] * m2ft )
 
         scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' )
 
-    scenario_file_return = open( return_path, 'w' )
+    scenario_file_return = open(Path('scenario', return_path), 'w')
     state2 = {}
     state2['action'] = None
     route_parameters2 = routeParameters( G, route2, ac )
@@ -1003,7 +1006,7 @@ def createSurveillanceFlightPlan(route1, route2, ac, departure_time, G: MultiDiG
     print(f'Creating surveillance flight plan for {ac["id"]}...')
 
     return_path = scenario_path.with_name(scenario_path.stem + '_return.scn')
-    m2ft = 3.281 #TODO These should be constants
+    m2ft = 3.281 # TODO These should be constants
     m_s2knot = 1.944
     m_s2ft_min = 197
 
@@ -1361,7 +1364,7 @@ def createDeliveryCSV( departure_times, frequencies, uncertainties, distributed,
         str( frequencies ).replace( '[', '' ).replace( ']', '' ).replace( ', ', '-' ) + '_' + \
         str( simulation_time ) + '.csv'
 
-    path = sys.path[0] + '\\data\\' + file_name
+    path = Path(sys.path[0], 'data', file_name)
 
     data_frame.to_csv( path )
 
@@ -1412,7 +1415,8 @@ def createSurveillanceCSV(origins, destinations, departure_times, drone_models, 
 
     for i in range(len(origins)):
         print(f'Creating flight plan with origin: ({origins[i][0]}, {origins[i][1]}) and destination: ({destinations[i][0]}, {destinations[i][1]})')
-        planSurveillanceDrone(origins[i], destinations[i], departure_times[i], drone_models[i], operation_ids[i], operation_durations[i], data)
+        planSurveillanceDrone(origins[i], destinations[i], departure_times[i], drone_models[i],
+            operation_ids[i], operation_durations[i], data)
 
     data_frame = pd.DataFrame(data)
 

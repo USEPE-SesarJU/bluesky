@@ -450,11 +450,12 @@ class UsepeSegments( core.Entity ):
                     usepedronecommands.droneLanding( acid )
                     continue
 
-                usepestrategic.updateStrategicDeconflictionDrone( acid, orig, dest )
+                rerouting = usepestrategic.updateStrategicDeconflictionDrone( acid, orig, dest )
 
-                scn = usepedronecommands.rerouteDrone( acid )
+                if rerouting:
+                    scn = usepedronecommands.rerouteDrone( acid )
 
-                acrte.wpstack[iactwp] = ['DEL {}'.format( acid ), scn]
+                    acrte.wpstack[iactwp] = ['DEL {}'.format( acid ), scn]
 
             # 4th. To update the flight plans in the queue
             usepeflightplans.reprocessFlightPlans()
@@ -590,6 +591,9 @@ class UsepeStrategicDeconfliction( core.Entity ):
                 orig (list): [lon, lat, alt] of the origin point. It is the coordinates of the active
                              wpt
                 dest (list): [lon, lat, alt] of the destination point.
+
+        Return:
+                rerouting (bool): False if the current flight is a predetermined cleared path
         """
 
         departure_time = sim.simt
@@ -597,6 +601,8 @@ class UsepeStrategicDeconfliction( core.Entity ):
         name = acid
 
         ac = usepeflightplans.ac_dict[name]
+
+        rerouting = True
 
         if ac['purpose'] == 'delivery':
 
@@ -622,6 +628,38 @@ class UsepeStrategicDeconfliction( core.Entity ):
                                                                                copy.deepcopy( usepesegments.segments ),
                                                                                usepeconfig, ac, hovering_time=30,
                                                                                only_rerouting=True )
+        elif ac['purpose'] == 'surveillance':
+            mask = usepeflightplans.flight_plan_df_back_up['ac'] == acid
+            fp_row = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]
+
+            latf_leave = fp_row['destination_lat']
+            lonf_leave = fp_row['destination_lon']
+            altf_leave = fp_row['destination_alt']
+
+            dest_leave = [lonf_leave, latf_leave, altf_leave]
+
+            latf_return = fp_row['origin_lat']
+            lonf_return = fp_row['origin_lon']
+            altf_return = fp_row['origin_alt']
+
+            dest_return = [lonf_return, latf_return, altf_return]
+
+            if (dest[0] == dest_return[0]) and (dest[1] == dest_return[1]):
+                users, route, _ = deconflictedPathPlanning(orig, dest, departure_time,
+                                                usepegraph.graph, self.users, self.initial_time,
+                                                self.final_time, copy.deepcopy(usepesegments.segments),
+                                                usepeconfig, ac, only_rerouting=True)
+            
+            elif (dest[0] == dest_leave[0]) and (dest[1] == dest_leave[1]):
+                users, route, _ = deconflictedSurveillancePathPlanning(orig, dest, dest,
+                                                dest_return, departure_time, usepegraph.graph,
+                                                self.users, self.initial_time, self.final_time,
+                                                copy.deepcopy(usepesegments.segments), usepeconfig, ac,
+                                                only_rerouting=True, wait_time=fp_row['operation_duration'])
+            else:
+                users = self.users
+                route = usepeflightplans.route_dict[name]
+                rerouting = False
         else:
             users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
                                                                    usepegraph.graph, self.users,
@@ -632,6 +670,8 @@ class UsepeStrategicDeconfliction( core.Entity ):
         usepeflightplans.route_dict[name] = route
 
         self.users = users
+
+        return rerouting
 
     def update( self ):  # Not used
         return
@@ -685,12 +725,13 @@ class UsepeDroneCommands( core.Entity ):
         scenario_path = Path('USEPE/temp', scenario_name)
         scenario_file = open(Path('scenario', scenario_path), 'w')
 
-        if ac['purpose'] == 'delivery': #TODO Conform to new scenario path
+        if ac['purpose'] == 'delivery':
             createDeliveryFlightPlan( route[0], route[1], ac, departure_time, G, layers_dict,
                                       scenario_file, scenario_path, hovering_time=30 )
         elif ac['purpose'] == 'surveillance':
             premade_scenario_path = Path('USEPE', 'exercise_3', 'surveillance_' + ac['op_id'] + '.scn')
-            createSurveillanceFlightPlan(route[0], route[1], ac, departure_time, G, layers_dict, scenario_file, scenario_path, premade_scenario_path)
+            createSurveillanceFlightPlan(route[0], route[1], ac, departure_time, G, layers_dict,
+                scenario_file, scenario_path, premade_scenario_path)
         else:
             createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
 
@@ -709,9 +750,9 @@ class UsepeDroneCommands( core.Entity ):
         G = usepegraph.graph
         layers_dict = usepegraph.layers_dict
 
-        scenario_path = r'.\scenario\usepe\temp\scenario_traffic_drone_{}.scn'.format( ac['id'] )
-
-        scenario_file = open( scenario_path, 'w' )
+        scenario_name = f'scenario_traffic_drone_{ac["id"]}.scn'
+        scenario_path = Path('USEPE/temp', scenario_name)
+        scenario_file = open(Path('scenario', scenario_path), 'w')
 
         if ac['purpose'] == 'delivery':
             if len( route ) == 2:
@@ -719,12 +760,19 @@ class UsepeDroneCommands( core.Entity ):
                                           scenario_file, scenario_path, hovering_time=30 )
             else:
                 createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
+        elif ac['purpose'] == 'surveillance':
+            if len(route) == 2:
+                premade_scenario_path = Path('USEPE', 'exercise_3', 'surveillance_' + ac['op_id'] + '.scn')
+                createSurveillanceFlightPlan(route[0], route[1], ac, departure_time, G, layers_dict,
+                    scenario_file, scenario_path, premade_scenario_path)
+            else:
+                createFlightPlan(route, ac, departure_time, G, layers_dict, scenario_file)
         else:
             createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
 
         scenario_file.close()
 
-        text = 'PCALL {} REL'.format( '.' + scenario_path[10:] )
+        text = f'PCALL {scenario_path} REL'
 
         return text
 
