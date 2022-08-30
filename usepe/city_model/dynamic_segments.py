@@ -360,7 +360,8 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
     G = updateSegmentVelocity( G, updated_segments )
 
     # Update geovectoring rules
-    G = updateGeovectoringRule( G, segments_df )
+    if 'geovect' in segments_df:
+        G = updateGeovectoringRule( G, segments_df )
 
     # Add travel times to the graph
     G = addTravelTimes( G )
