@@ -2,15 +2,14 @@
 # Import the global bluesky objects. Uncomment the ones you need
 from os import listdir
 from os.path import join
+from pathlib import Path
+import configparser
 import copy
 import datetime
 import math
 import os
 import pickle
 import time
-from pathlib import Path
-
-import configparser
 
 from bluesky import core, traf, stack, sim  # , settings, navdb,  scr, tools
 from bluesky.tools import geo
@@ -55,7 +54,8 @@ def init_plugin():
 
     # ---------------------------------- DEFINED BY USER ------------------------------------
     # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\settings_exercise_1_reference.cfg"
-    config_path = r"/home/ror/ws/scenarios/scenario/USEPE/exercise_3/settings_exe_3_ref.cfg"
+    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
+    # config_path = r"/home/ror/ws/scenarios/scenario/USEPE/exercise_3/settings_exe_3_ref.cfg"
     # ------------------------------------------------------------------------------------------
 
     # graph_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\testing_graph.graphml"
@@ -130,12 +130,14 @@ def update():
     usepedronecommands.update()
     # print( ' - Commands updated - ' )
     end_commands = time.time()
-    print( 'The elapsed time UPDATE is:\n - graph update: {}\n - segmentation update: {}\n\
-         - strategic update: {}\n - flight plan update: {}\n - commands update: {}'.format( end_graph - start,
-                                                                                           end_segm - start,
-                                                                                           end_strat - start,
-                                                                                           end_flight - start,
-                                                                                           end_commands - start ) )
+    #===============================================================================================
+    # print( 'The elapsed time UPDATE is:\n - graph update: {}\n - segmentation update: {}\n\
+    #      - strategic update: {}\n - flight plan update: {}\n - commands update: {}'.format( end_graph - start,
+    #                                                                                        end_segm - start,
+    #                                                                                        end_strat - start,
+    #                                                                                        end_flight - start,
+    #                                                                                        end_commands - start ) )
+    #===============================================================================================
     return
 
 
@@ -156,12 +158,14 @@ def preupdate():
     usepedronecommands.preupdate()
     # print( ' - Commands pre-updated - ' )
     end_commands = time.time()
-    print( 'The elapsed time PREUPDATE is:\n - graph preupdate: {}\n - segmentation preupdate: {}\n\
-         - strategic preupdate: {}\n - flight plan preupdate: {}\n - commands preupdate: {}'.format( end_graph - start,
-                                                                                                    end_segm - start,
-                                                                                                    end_strat - start,
-                                                                                                    end_flight - start,
-                                                                                                    end_commands - start ) )
+    #===============================================================================================
+    # print( 'The elapsed time PREUPDATE is:\n - graph preupdate: {}\n - segmentation preupdate: {}\n\
+    #      - strategic preupdate: {}\n - flight plan preupdate: {}\n - commands preupdate: {}'.format( end_graph - start,
+    #                                                                                                 end_segm - start,
+    #                                                                                                 end_strat - start,
+    #                                                                                                 end_flight - start,
+    #                                                                                                 end_commands - start ) )
+    #===============================================================================================
 
     return
 
@@ -215,25 +219,13 @@ class UsepeSegments( core.Entity ):
 
         # Initialise class of dynamic segmentation - it provides the initial segments
         # Include the region for input
-        region = "Hannover"
-        self.segmentation_service = segmentationService( region )
-        self.segmentation_service .export_cells()  # export .json file to "./data/examples"
+        self.region = "Hannover"
+        self.segmentation_service = segmentationService( self.region )
+        self.segmentation_service.export_cells()  # export .json file to "./data/examples"
 
-        self.segments = pd.read_json( 'usepe/segmentation_service/data/examples/' + region + '.json', orient="records", lines=True )
-        # self.segments = self.segmentation_service.cells
-        #### Remove: This is included for testing. We want to avoid no-fly zones
-        # for key in self.segments:
-        #     self.segments[key]['speed'] = 20
-        #     self.segments[key]['capacity'] = 5
-        #     self.segments[key]['updated'] = True
-        #     self.segments[key]['new'] = True
-        #     if self.segments[key]['speed'] == 0:
-        #         self.segments[key]['speed'] = 5
-        #         self.segments[key]['capacity'] = 1
-        #         self.segments[key]['updated'] = True
+        self.segments = pd.read_json( 'usepe/segmentation_service/data/examples/' + self.region + '.json', orient="records", lines=True )
+
         usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )
-
-        #####
 
         with self.settrafarrays():
             self.recentpath = np.array( [], dtype=np.ndarray )
@@ -254,46 +246,25 @@ class UsepeSegments( core.Entity ):
         if not usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
             return updated, self.segments
 
-        '''if ( sim.simt > 1800 ) & ( sim.simt < 1802 ):
-            self.segments['573']['speed'] = 0
-            self.segments['573']['capacity'] = 0
-            self.segments['573']['updated'] = True
-            updated = True
-            stack.stack( 'POLY segment573 52.375,9.72,52.375,9.73,52.3875,9.73,52.3875,9.72' )
+        # drone path
+        for i in range( self.recentpath.size ):
+            acrte = traf.ap.route[i]
+            iactwp = acrte.iactwp
+            temparr = np.empty_like( self.recentpath[i] )
+            currentpos = ( sim.simt, traf.lat[i], traf.lon[i], traf.alt[i], acrte.wpname[iactwp] )
+            temparr[-1] = currentpos
+            temparr[:-1] = self.recentpath[i][1:]
+            self.recentpath[i][:] = temparr
 
-        if ( sim.simt > 3600 ) & ( sim.simt < 3602 ):
-            self.segments['573']['speed'] = 20
-            self.segments['573']['capacity'] = 5
-            self.segments['573']['updated'] = True
-            updated = True
-        '''
         update_interval = 300  # sec
-
 
         if sim.simt % update_interval == 0:
             '''Inputs provided for the update rules'''
             # waypoints for each drone + graph
-            usepeflightplans.route_dict  # dictionary containing the waypoints of each drone flying. Key - drone id, values - list of waypoints id
+            # usepeflightplans.route_dict  # dictionary containing the waypoints of each drone flying. Key - drone id, values - list of waypoints id
             # usepegraph.node  # dict containng the features of each waypoint key - waypoint id, value dict with features and its values
-
             # drone ids
             # traf.id
-
-            # drone path
-            for i in range( self.recentpath.size ):
-                temparr = np.empty_like( self.recentpath[i] )
-                currentpos = ( sim.simt, traf.lat[i], traf.lon[i], traf.alt[i] )
-                temparr[-1] = currentpos
-                temparr[:-1] = self.recentpath[i][1:]
-                self.recentpath[i][:] = temparr
-
-            # active waypoint
-            actwp = []
-            for acid in traf.id:
-                idx = traf.id2idx( acid )
-                acrte = traf.ap.route[idx]
-                iactwp = acrte.iactwp
-                actwp.append( acrte.wpname[iactwp] )
 
             # Go through all conflict pairs and sort the IDs for easier matching
             currentconf = [tuple( sorted( pair ) ) for pair in traf.cd.confpairs_unique]  # pairs of drones in conflict AT THIS MOMENT
@@ -321,61 +292,41 @@ class UsepeSegments( core.Entity ):
                 drone_2_index = traf.id.index( pair[1] )
                 currentconf_hdg.append( ( traf.hdg[drone_1_index], traf.hdg[drone_2_index] ) )
 
-
             # value of the conflict frequency threshold, e.g., 1 conflict / (km^2 * hour)
             # usepeconfig['Segmentation']['conflict_threshold']
 
-
             # external file (csv, txt, cfg) that provides: area definition, event start time, event end time
-
-            '''
-            # Save variables
-            if ( ( sim.simt > 27 ) & ( sim.simt < 29 ) ) or\
-                ( ( sim.simt > 627 ) & ( sim.simt < 629 ) ) or\
-                ( ( sim.simt > 727 ) & ( sim.simt < 729 ) ) or\
-                ( ( sim.simt > 1727 ) & ( sim.simt < 1729 ) ):
-                #
-                with open( 'drone_id.list', 'wb' ) as file:
-                    pickle.dump( traf.id, file )
-                #
-                with open( 'drone_active_waypoint.list', 'wb' ) as file:
-                    pickle.dump( actwp, file )
-                #
-                with open( 'drones_routes.dict', 'wb' ) as file:
-                    pickle.dump( usepeflightplans.route_dict, file )
-                #
-                # with open( 'graph_test.graph', 'wb' ) as file:
-                #    pickle.dump( usepegraph, filehandler )
-                #
-                with open( 'drones_actual_paths.list', 'wb' ) as file:
-                    pickle.dump( self.recentpath, file )
-                #
-                with open( 'conflict_pairs.list', 'wb' ) as file:
-                    pickle.dump( currentconf, file )
-                #
-                with open( 'conflict_pairs_cpa_location.list', 'wb' ) as file:
-                    pickle.dump( currentconf_loc, file )
-                #
-                with open( 'conflict_pairs_headings.list', 'wb' ) as file:
-                    pickle.dump( currentconf_hdg, file )
-                #
-                # print( 'Saved.' )
-            '''
 
             '''Update rules'''
 
+            # WIND #
             wind_file = usepeconfig['Segmentation service']['wind_path']
-
-
             self.segmentation_service.update_wind_strat( wind_file, False )  # strategic update rules based on wind data
-            # self.segmentation_service.update_wind_tact(flight_plan, flight_log, city_graph) # not yet implemented
+            self.segmentation_service.update_wind_tact( usepeflightplans.route_dict,
+                                                        self.recentpath,
+                                                        None,
+                                                        traf.id,
+                                                        usepegraph.node )  # tactical update rules
+
+            # TRAFIC #
+            self.segmentation_service.update_traffic_strat( self.recentpath )
+            self.segmentation_service.update_traffic_tact( self.recentpath )
+
+            # CONFLICTS #
+            self.segmentation_service.update_conflict( currentconf, currentconf_loc,
+                                                       currentconf_hdg, update_interval )
+
             updated = True
+            self.segmentation_service.export_cells()  # export .json file to "./data/examples"
+            self.segments = pd.read_json( 'usepe/segmentation_service/data/examples/' + self.region + '.json', orient="records", lines=True )
 
         # The event rule is continuous
         self.segmentation_service.update_event( 'event', sim.simt )  # event update rule
         if self.segmentation_service.event_update:
             updated = True
             self.segmentation_service.event_update = False
+            self.segmentation_service.export_cells()  # export .json file to "./data/examples"
+            self.segments = pd.read_json( 'usepe/segmentation_service/data/examples/' + self.region + '.json', orient="records", lines=True )
 
         segments = self.segments
 
@@ -528,7 +479,7 @@ class UsepeStrategicDeconfliction( core.Entity ):
                 name = row['purpose'].upper() + str( self.background_drones )
             elif row['purpose'] == 'surveillance':
                 self.surveillance_drones += 1
-                name = row['purpose'].upper() + str(self.surveillance_drones)
+                name = row['purpose'].upper() + str( self.surveillance_drones )
 
         # TODO: add all the drone types or read the information directly from BlueSky parameters
         if row['drone'] == 'M600':
@@ -561,11 +512,11 @@ class UsepeStrategicDeconfliction( core.Entity ):
                                                                            usepeconfig, ac, hovering_time=30,
                                                                            only_rerouting=False )
         elif ac['purpose'] == 'surveillance':
-            users, route, delayed_time = deconflictedSurveillancePathPlanning(orig, dest, dest, orig,
+            users, route, delayed_time = deconflictedSurveillancePathPlanning( orig, dest, dest, orig,
                                             departure_time, usepegraph.graph, self.users,
                                             self.initial_time, self.final_time,
-                                            copy.deepcopy(usepesegments.segments), usepeconfig,
-                                            ac, only_rerouting=False, wait_time=row['operation_duration'])
+                                            copy.deepcopy( usepesegments.segments ), usepeconfig,
+                                            ac, only_rerouting=False, wait_time=row['operation_duration'] )
         else:
             users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
                                                                    usepegraph.graph, self.users,
@@ -644,18 +595,18 @@ class UsepeStrategicDeconfliction( core.Entity ):
 
             dest_return = [lonf_return, latf_return, altf_return]
 
-            if (dest[0] == dest_return[0]) and (dest[1] == dest_return[1]):
-                users, route, _ = deconflictedPathPlanning(orig, dest, departure_time,
+            if ( dest[0] == dest_return[0] ) and ( dest[1] == dest_return[1] ):
+                users, route, _ = deconflictedPathPlanning( orig, dest, departure_time,
                                                 usepegraph.graph, self.users, self.initial_time,
-                                                self.final_time, copy.deepcopy(usepesegments.segments),
-                                                usepeconfig, ac, only_rerouting=True)
-            
-            elif (dest[0] == dest_leave[0]) and (dest[1] == dest_leave[1]):
-                users, route, _ = deconflictedSurveillancePathPlanning(orig, dest, dest,
+                                                self.final_time, copy.deepcopy( usepesegments.segments ),
+                                                usepeconfig, ac, only_rerouting=True )
+
+            elif ( dest[0] == dest_leave[0] ) and ( dest[1] == dest_leave[1] ):
+                users, route, _ = deconflictedSurveillancePathPlanning( orig, dest, dest,
                                                 dest_return, departure_time, usepegraph.graph,
                                                 self.users, self.initial_time, self.final_time,
-                                                copy.deepcopy(usepesegments.segments), usepeconfig, ac,
-                                                only_rerouting=True, wait_time=fp_row['operation_duration'])
+                                                copy.deepcopy( usepesegments.segments ), usepeconfig, ac,
+                                                only_rerouting=True, wait_time=fp_row['operation_duration'] )
             else:
                 users = self.users
                 route = usepeflightplans.route_dict[name]
@@ -722,22 +673,22 @@ class UsepeDroneCommands( core.Entity ):
         layers_dict = usepegraph.layers_dict
 
         scenario_name = f'scenario_traffic_drone_{ac["id"]}.scn'
-        scenario_path = Path('USEPE/temp', scenario_name)
-        scenario_file = open(Path('scenario', scenario_path), 'w')
+        scenario_path = Path( 'USEPE/temp', scenario_name )
+        scenario_file = open( Path( 'scenario', scenario_path ), 'w' )
 
         if ac['purpose'] == 'delivery':
             createDeliveryFlightPlan( route[0], route[1], ac, departure_time, G, layers_dict,
                                       scenario_file, scenario_path, hovering_time=30 )
         elif ac['purpose'] == 'surveillance':
-            premade_scenario_path = Path('USEPE', 'exercise_3', 'surveillance_' + ac['op_id'] + '.scn')
-            createSurveillanceFlightPlan(route[0], route[1], ac, departure_time, G, layers_dict,
-                scenario_file, scenario_path, premade_scenario_path)
+            premade_scenario_path = Path( 'USEPE', 'exercise_3', 'surveillance_' + ac['op_id'] + '.scn' )
+            createSurveillanceFlightPlan( route[0], route[1], ac, departure_time, G, layers_dict,
+                scenario_file, scenario_path, premade_scenario_path )
         else:
             createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
 
         scenario_file.close()
 
-        stack.stack(f'PCALL {scenario_path} REL')
+        stack.stack( f'PCALL {scenario_path} REL' )
 
     def rerouteDrone( self, acid ):
         """
@@ -751,8 +702,8 @@ class UsepeDroneCommands( core.Entity ):
         layers_dict = usepegraph.layers_dict
 
         scenario_name = f'scenario_traffic_drone_{ac["id"]}.scn'
-        scenario_path = Path('USEPE/temp', scenario_name)
-        scenario_file = open(Path('scenario', scenario_path), 'w')
+        scenario_path = Path( 'USEPE/temp', scenario_name )
+        scenario_file = open( Path( 'scenario', scenario_path ), 'w' )
 
         if ac['purpose'] == 'delivery':
             if len( route ) == 2:
@@ -761,12 +712,12 @@ class UsepeDroneCommands( core.Entity ):
             else:
                 createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
         elif ac['purpose'] == 'surveillance':
-            if len(route) == 2:
-                premade_scenario_path = Path('USEPE', 'exercise_3', 'surveillance_' + ac['op_id'] + '.scn')
-                createSurveillanceFlightPlan(route[0], route[1], ac, departure_time, G, layers_dict,
-                    scenario_file, scenario_path, premade_scenario_path)
+            if len( route ) == 2:
+                premade_scenario_path = Path( 'USEPE', 'exercise_3', 'surveillance_' + ac['op_id'] + '.scn' )
+                createSurveillanceFlightPlan( route[0], route[1], ac, departure_time, G, layers_dict,
+                    scenario_file, scenario_path, premade_scenario_path )
             else:
-                createFlightPlan(route, ac, departure_time, G, layers_dict, scenario_file)
+                createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
         else:
             createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
 

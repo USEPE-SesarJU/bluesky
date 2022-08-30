@@ -12,6 +12,8 @@ from usepe.city_model.dynamic_segments import dynamicSegments
 from usepe.city_model.path_planning import trajectoryCalculation, printRoute
 from usepe.city_model.scenario_definition import createFlightPlan, calcDistAccel, routeParameters
 from usepe.city_model.utils import checkIfNoFlyZone
+import time as tm
+
 
 __author__ = 'jbueno'
 __copyright__ = '(c) Nommon 2021'
@@ -315,10 +317,13 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
                                      route_parameters, ac,
                                      avg_flight_time )
 
+    print( 'aux' )
+    start = tm.time()
     overpopulated_segment, overpopulated_time = checkOverpopulatedSegment( 
         segments, users_step,
         initial_time + delayed_time, initial_time + delayed_time + avg_flight_time,
         avg_flight_time )
+    print( 'Overpopulated segments time', tm.time() - start, 's' )
 
     segments_step = segments.copy()
     G_step = G.copy()
@@ -419,8 +424,8 @@ def deconflictedDeliveryPathPlanning( orig1, dest1, orig2, dest2, time, G, users
     return users2, [route1, route2], delayed_time1
 
 
-def deconflictedSurveillancePathPlanning(orig1, dest1, orig2, dest2, departure_time, G, users, initial_time,
-                                        final_time, segments, config, ac, only_rerouting=False, wait_time=600):
+def deconflictedSurveillancePathPlanning( orig1, dest1, orig2, dest2, departure_time, G, users, initial_time,
+                                        final_time, segments, config, ac, only_rerouting=False, wait_time=600 ):
     """
     This function
 
@@ -444,13 +449,13 @@ def deconflictedSurveillancePathPlanning(orig1, dest1, orig2, dest2, departure_t
         - delayed_time1 (int): Delay of the flight (first trip) in seconds
     """
 
-    users1, route1, delayed_time1, departure2 = deconflictedPathPlanning(orig1, dest1, departure_time, G,
+    users1, route1, delayed_time1, departure2 = deconflictedPathPlanning( orig1, dest1, departure_time, G,
                                                     users, initial_time, final_time, segments, config,
                                                     ac, only_rerouting=only_rerouting, delivery=True,
-                                                    hovering_time=wait_time)
+                                                    hovering_time=wait_time )
 
-    users2, route2, _ = deconflictedPathPlanning(orig2, dest2, departure2, G, users1,
-                                        initial_time, final_time, segments, config, ac, only_rerouting=True)
+    users2, route2, _ = deconflictedPathPlanning( orig2, dest2, departure2, G, users1,
+                                        initial_time, final_time, segments, config, ac, only_rerouting=True )
 
     return users2, [route1, route2], delayed_time1
 
