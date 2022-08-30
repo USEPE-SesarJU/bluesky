@@ -29,7 +29,7 @@ def gmlFiles( directory ):
     gml_files = []
     for file in os.listdir( directory ):
         if file.endswith( ".gml" ):
-            gml_files += [directory + '\\' + file]
+            gml_files += [directory + os.sep + file]
 
     return gml_files
 
