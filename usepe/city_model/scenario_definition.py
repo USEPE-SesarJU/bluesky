@@ -1143,7 +1143,9 @@ def addFlightData( orig_lat, orig_lon, orig_alt,
                   drone_type,
                   purpose,
                   planned_time_s,
-                  data ):
+                  data,
+                  operation_id=None,
+                  operation_duration=None):
     if departure_time_seconds < 36000:
             departure_time = '0{}'.format( str( datetime.timedelta( seconds=departure_time_seconds ) ) )
     else:
@@ -1161,6 +1163,8 @@ def addFlightData( orig_lat, orig_lon, orig_alt,
     data['drone'].append( drone_type )
     data['purpose'].append( purpose )
     data['planned_time_s'].append( planned_time_s )
+    data['operation_id'].append(operation_id)
+    data['operation_duration'].append(operation_duration)
 
 
 def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G, segments, config ):
@@ -1185,6 +1189,8 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
              'departure_s': [],
              'drone': [],
              'purpose': [],
+             'operation_id': [],
+             'operation_duration': [],
              'planned_time_s': []}
 
     # Area of study
@@ -1249,8 +1255,8 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
         departure_time = '{}'.format( planned_time_s + time_submit_flight_plan )
         departure_time_seconds = planned_time_s + time_submit_flight_plan
 
-        addFlightData( orig_lat, orig_lon, None,
-                  dest_lat, dest_lon, None,
+        addFlightData( orig_lat, orig_lon, 55,
+                  dest_lat, dest_lon, 55,
                   departure_time_seconds,
                   drone_type,
                   'background',
@@ -1333,6 +1339,8 @@ def createDeliveryCSV( departure_times, frequencies, uncertainties, distributed,
              'departure_s': [],
              'drone': [],
              'purpose': [],
+             'operation_id': [],
+             'operation_duration': [],
              'planned_time_s': []}
 
     # Define the origin and destination points
@@ -1458,10 +1466,9 @@ def planSurveillanceDrone(orig, dest, departure_time, drone_model, operation_id,
                   drone_model,
                   'surveillance',
                   departure_time - submit_flight_plan,
-                  data)
-
-    data['operation_id'].append(operation_id)
-    data['operation_duration'].append(operation_duration)
+                  data,
+                  operation_id=operation_id,
+                  operation_duration=operation_duration)
 
 
 def createScenarioCSV( density, avg_flight_duration, departure_times, frequencies, simulation_time, G, segments, config ):
