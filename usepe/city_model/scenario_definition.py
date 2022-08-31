@@ -3,17 +3,17 @@
 """
 
 """
+from io import TextIOWrapper
+from pathlib import Path
 import configparser
 import copy
 import datetime
-from io import TextIOWrapper
 import json
 import math
 import os
 import random
 import string
 import sys
-from pathlib import Path
 
 from pyproj import Transformer
 
@@ -909,11 +909,11 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
 
     """
     print( 'Creating delivery flight plan of {0}...'.format( ac['id'] ) )
-    return_path = scenario_path.with_name(scenario_path.stem + '_return.scn')
+    return_path = scenario_path.with_name( scenario_path.stem + '_return.scn' )
 
     # TODO Remove return_path_rel if not needed
-    return_path_rel = './' + '/'.join( scenario_path.split( '\\' )[4:] )
-    return_path_rel = return_path_rel[:-4] + '_return.scn'
+    # return_path_rel = './' + '/'.join( scenario_path.split( '\\' )[4:] )
+    # return_path_rel = return_path_rel[:-4] + '_return.scn'
 
     m2ft = 3.281
     m_s2knot = 1.944
@@ -957,7 +957,7 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
 
         scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' )
 
-    scenario_file_return = open(Path('scenario', return_path), 'w')
+    scenario_file_return = open( Path( 'scenario', return_path ), 'w' )
     state2 = {}
     state2['action'] = None
     route_parameters2 = routeParameters( G, route2, ac )
@@ -987,8 +987,8 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
     scenario_file_return.close()
 
 
-def createSurveillanceFlightPlan(route1, route2, ac, departure_time, G: MultiDiGrpah3D, layers_dict,
-                                 scenario_file: TextIOWrapper, scenario_path: Path, premade_scenario_path):
+def createSurveillanceFlightPlan( route1, route2, ac, departure_time, G: MultiDiGrpah3D, layers_dict,
+                                 scenario_file: TextIOWrapper, scenario_path: Path, premade_scenario_path ):
     """
     Create a flight plan for a surveillance drone. All the commands are written in a text file.
 
@@ -1003,79 +1003,79 @@ def createSurveillanceFlightPlan(route1, route2, ac, departure_time, G: MultiDiG
         - scenario_path (Path): The path to the surveillance scenario
         - premade_scenario_path (Path): The path to the premade surveillance operation scenario
     """
-    print(f'Creating surveillance flight plan for {ac["id"]}...')
+    print( f'Creating surveillance flight plan for {ac["id"]}...' )
 
-    return_path = scenario_path.with_name(scenario_path.stem + '_return.scn')
-    m2ft = 3.281 # TODO These should be constants
+    return_path = scenario_path.with_name( scenario_path.stem + '_return.scn' )
+    m2ft = 3.281  # TODO These should be constants
     m_s2knot = 1.944
     m_s2ft_min = 197
 
-    state ={}
+    state = {}
     state['action'] = None
-    route_parameters = routeParameters(G, route1, ac)
+    route_parameters = routeParameters( G, route1, ac )
 
-    for i in range(len(route1) - 1):
-        state = createInstructionV3(
-            scenario_file, route_parameters, i, ac, G, layers_dict, departure_time, state)
+    for i in range( len( route1 ) - 1 ):
+        state = createInstructionV3( 
+            scenario_file, route_parameters, i, ac, G, layers_dict, departure_time, state )
 
     new_lines = []
 
     if state['action'] == 'cruise':
-        new_lines.append(f'{departure_time}> DEFWPT {route1[-1]}, ' +
-            f'{G.nodes[route1[-1]]["y"]}, {G.nodes[route1[-1]]["x"]}')
+        new_lines.append( f'{departure_time}> DEFWPT {route1[-1]}, ' +
+            f'{G.nodes[route1[-1]]["y"]}, {G.nodes[route1[-1]]["x"]}' )
 
-        new_lines.append(f'{departure_time}> ADDWPT {ac["id"]}, {route1[-1]}, ' +
-            f'{str(route_parameters[str(len(route1) - 2)]["speed"] * m_s2knot)}')
+        new_lines.append( f'{departure_time}> ADDWPT {ac["id"]}, {route1[-1]}, ' +
+            f'{str(route_parameters[str(len(route1) - 2)]["speed"] * m_s2knot)}' )
 
-        new_lines.append(f'{departure_time}> {ac["id"]} ATDIST {route1[-1]} ' +
-            f'0.03 SPD {ac["id"]} 5')
+        new_lines.append( f'{departure_time}> {ac["id"]} ATDIST {route1[-1]} ' +
+            f'0.03 SPD {ac["id"]} 5' )
 
-        new_lines.append(f'{departure_time}> {ac["id"]} ATDIST {route1[-1]} ' +
-            f'0.001 SPD {ac["id"]} 0')
+        new_lines.append( f'{departure_time}> {ac["id"]} ATDIST {route1[-1]} ' +
+            f'0.001 SPD {ac["id"]} 0' )
 
-        new_lines.append(f'{departure_time}> {ac["id"]} ATDIST {route1[-1]} 0.001 ' +
-            f'{ac["id"]} ATSPD 0, DELAY 5 PCALL {premade_scenario_path} {ac["id"]} {return_path} REL')
+        new_lines.append( f'{departure_time}> {ac["id"]} ATDIST {route1[-1]} 0.001 ' +
+            f'{ac["id"]} ATSPD 0, DELAY 5 PCALL {premade_scenario_path} {ac["id"]} {return_path} REL' )
 
     elif state['action'] == 'climbing':
-        new_lines.append(f'{departure_time}> {ac["id"]} AT {state["ref_wpt"]} ' +
-            f'DO {ac["id"]} ATALT {layers_dict[route1[-1][0]] * m2ft}, VS {ac["id"]} 0')
+        new_lines.append( f'{departure_time}> {ac["id"]} AT {state["ref_wpt"]} ' +
+            f'DO {ac["id"]} ATALT {layers_dict[route1[-1][0]] * m2ft}, VS {ac["id"]} 0' )
 
-        new_lines.append(f'{departure_time}> {ac["id"]} AT {route1[-1]} DO ' +
+        new_lines.append( f'{departure_time}> {ac["id"]} AT {route1[-1]} DO ' +
             f'{ac["id"]} ATALT {layers_dict[route1[-1][0] * m2ft]}, DELAY 5 ' +
-            f'PCALL {premade_scenario_path} {ac["id"]} {return_path} REL')
+            f'PCALL {premade_scenario_path} {ac["id"]} {return_path} REL' )
 
-    for i in range(len(new_lines)):
-        scenario_file.write(new_lines[i] + '\n')
+    for i in range( len( new_lines ) ):
+        scenario_file.write( new_lines[i] + '\n' )
 
-    scenario_file_return = open(Path('scenario', return_path), 'w')
+    scenario_file_return = open( Path( 'scenario', return_path ), 'w' )
     state = {}
     state['action'] = None
-    route_parameters = routeParameters(G, route2, ac)
+    route_parameters = routeParameters( G, route2, ac )
 
     # Redefine departure time for the return trip as relative to the previous stretch
     departure_time = '00:00:00.00'
 
-    for i in range(len(route2) -1):
-        state = createInstructionV3(
-            scenario_file_return, route_parameters, i, ac, G, layers_dict, departure_time, state)
+    for i in range( len( route2 ) - 1 ):
+        state = createInstructionV3( 
+            scenario_file_return, route_parameters, i, ac, G, layers_dict, departure_time, state )
 
     new_lines = []
     if state['action'] == 'cruise':
-        new_lines.append(f'{departure_time}> DEFWPT {route2[-1]}, ' +
-            f'{G.nodes[route2[-1]]["y"]}, {G.nodes[route2[-1]]["x"]}')
+        new_lines.append( f'{departure_time}> DEFWPT {route2[-1]}, ' +
+            f'{G.nodes[route2[-1]]["y"]}, {G.nodes[route2[-1]]["x"]}' )
 
-        new_lines.append(f'{departure_time}> ADDWPT {ac["id"]} {route2[-1]}, , ' +
-            f'{str(route_parameters[str(len(route2) - 2)]["speed"] * m_s2knot)}')
+        new_lines.append( f'{departure_time}> ADDWPT {ac["id"]} {route2[-1]}, , ' +
+            f'{str(route_parameters[str(len(route2) - 2)]["speed"] * m_s2knot)}' )
 
-        new_lines.append(f'{departure_time}> {ac["id"]} ATDIST {route2[-1]} ' +
-            f'0.003 DEL {ac["id"]}')
+        new_lines.append( f'{departure_time}> {ac["id"]} ATDIST {route2[-1]} ' +
+            f'0.003 DEL {ac["id"]}' )
 
     elif state['action'] == 'climbing':
-        new_lines.append(f'{departure_time}> {ac["id"]} AT {state["ref_wpt"]} ' +
-            f'DO {ac["id"]} ATALT {layers_dict[route2[-1][0]] * m2ft}, DEL {ac["id"]}')
+        new_lines.append( f'{departure_time}> {ac["id"]} AT {state["ref_wpt"]} ' +
+            f'DO {ac["id"]} ATALT {layers_dict[route2[-1][0]] * m2ft}, DEL {ac["id"]}' )
 
-    for i in range(len(new_lines)):
-        scenario_file_return.write(new_lines[i] + '\n')
+    for i in range( len( new_lines ) ):
+        scenario_file_return.write( new_lines[i] + '\n' )
 
     scenario_file_return.close()
 
@@ -1145,7 +1145,7 @@ def addFlightData( orig_lat, orig_lon, orig_alt,
                   planned_time_s,
                   data,
                   operation_id=None,
-                  operation_duration=None):
+                  operation_duration=None ):
     if departure_time_seconds < 36000:
             departure_time = '0{}'.format( str( datetime.timedelta( seconds=departure_time_seconds ) ) )
     else:
@@ -1163,8 +1163,8 @@ def addFlightData( orig_lat, orig_lon, orig_alt,
     data['drone'].append( drone_type )
     data['purpose'].append( purpose )
     data['planned_time_s'].append( planned_time_s )
-    data['operation_id'].append(operation_id)
-    data['operation_duration'].append(operation_duration)
+    data['operation_id'].append( operation_id )
+    data['operation_duration'].append( operation_duration )
 
 
 def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G, segments, config ):
@@ -1270,7 +1270,7 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
 
     file_name = 'background_traffic_' + str( density ).replace( '.', '-' ) + '_' + str( int( avg_flight_duration ) ) + '_' + str( simulation_time ) + '.csv'
 
-    path = Path(sys.path[0], 'data', file_name)
+    path = Path( sys.path[0], 'data', file_name )
 
     data_frame.to_csv( path )
 
@@ -1372,14 +1372,14 @@ def createDeliveryCSV( departure_times, frequencies, uncertainties, distributed,
         str( frequencies ).replace( '[', '' ).replace( ']', '' ).replace( ', ', '-' ) + '_' + \
         str( simulation_time ) + '.csv'
 
-    path = Path(sys.path[0], 'data', file_name)
+    path = Path( sys.path[0], 'data', file_name )
 
     data_frame.to_csv( path )
 
     print( 'Delivery drones stored in : {0}'.format( path ) )
 
 
-def createSurveillanceCSV(origins, destinations, departure_times, drone_models, operation_ids, operation_durations, simulation_time):
+def createSurveillanceCSV( origins, destinations, departure_times, drone_models, operation_ids, operation_durations, simulation_time ):
     """
     This function creates the csv with the flight plan data of surveillance drones.
 
@@ -1407,8 +1407,8 @@ def createSurveillanceCSV(origins, destinations, departure_times, drone_models, 
     """
 
     # Verify all lists are equal length
-    if not(len(origins) == len(destinations) == len(departure_times) == len(drone_models)):
-        raise ValueError('All lists provided must be of equal length.')
+    if not( len( origins ) == len( destinations ) == len( departure_times ) == len( drone_models ) ):
+        raise ValueError( 'All lists provided must be of equal length.' )
 
     # Data to be included in the CSV file
     data = { 'origin_lat': [], 'origin_lon': [], 'origin_alt': [],
@@ -1421,25 +1421,25 @@ def createSurveillanceCSV(origins, destinations, departure_times, drone_models, 
              'operation_duration': [],
              'planned_time_s': []}
 
-    for i in range(len(origins)):
-        print(f'Creating flight plan with origin: ({origins[i][0]}, {origins[i][1]}) and destination: ({destinations[i][0]}, {destinations[i][1]})')
-        planSurveillanceDrone(origins[i], destinations[i], departure_times[i], drone_models[i],
-            operation_ids[i], operation_durations[i], data)
+    for i in range( len( origins ) ):
+        print( f'Creating flight plan with origin: ({origins[i][0]}, {origins[i][1]}) and destination: ({destinations[i][0]}, {destinations[i][1]})' )
+        planSurveillanceDrone( origins[i], destinations[i], departure_times[i], drone_models[i],
+            operation_ids[i], operation_durations[i], data )
 
-    data_frame = pd.DataFrame(data)
+    data_frame = pd.DataFrame( data )
 
     file_name = 'surveillance_' + \
-        str(departure_times).replace( '[', '' ).replace( ']', '' ).replace( ', ', '-' ) + \
-        '_' + str(simulation_time) + '.csv'
+        str( departure_times ).replace( '[', '' ).replace( ']', '' ).replace( ', ', '-' ) + \
+        '_' + str( simulation_time ) + '.csv'
 
-    path = Path(sys.path[0], 'data', file_name)
+    path = Path( sys.path[0], 'data', file_name )
 
-    data_frame.to_csv(path)
+    data_frame.to_csv( path )
 
-    print(f'Delivery drones stored in: {path}')
+    print( f'Delivery drones stored in: {path}' )
 
 
-def planSurveillanceDrone(orig, dest, departure_time, drone_model, operation_id, operation_duration, data):
+def planSurveillanceDrone( orig, dest, departure_time, drone_model, operation_id, operation_duration, data ):
     """
     This function takes information on the flight of 1 surveillance drone and adds a planning time.
 
@@ -1454,13 +1454,13 @@ def planSurveillanceDrone(orig, dest, departure_time, drone_model, operation_id,
         - operation_duration: Operation duration in seconds, type: int
         - data:               Stores all the flight plans, type: dict
     """
-    (orig_lat, orig_lon, orig_alt) = orig
-    (dest_lat, dest_lon, dest_alt) = dest
+    ( orig_lat, orig_lon, orig_alt ) = orig
+    ( dest_lat, dest_lon, dest_alt ) = dest
 
     # Flight plan must be submitted 10 min before departure
     submit_flight_plan = 10 * 60
 
-    addFlightData(orig_lat, orig_lon, orig_alt,
+    addFlightData( orig_lat, orig_lon, orig_alt,
                   dest_lat, dest_lon, dest_alt,
                   departure_time,
                   drone_model,
@@ -1468,7 +1468,7 @@ def planSurveillanceDrone(orig, dest, departure_time, drone_model, operation_id,
                   departure_time - submit_flight_plan,
                   data,
                   operation_id=operation_id,
-                  operation_duration=operation_duration)
+                  operation_duration=operation_duration )
 
 
 def createScenarioCSV( density, avg_flight_duration, departure_times, frequencies, simulation_time, G, segments, config ):

@@ -3,6 +3,7 @@
 """
 Additional functions
 """
+import copy
 import math
 import string
 
@@ -194,6 +195,55 @@ def shortest_dist_to_point( x1, y1, x2, y2, x, y ):
     square_dist = _dx ** 2 + _dy ** 2
     return math.sqrt( square_dist )
 
+
+def wpt_bsc2wpt_graph( wpt_route_bsc, wpt_route_graph ):
+    '''
+    This function relates the name of the wpts in BlueSky with the names of the
+    waypoints in the graph for a given aircraft
+
+    wpt_route_bsc - list with waypoints names as bluesky loads them
+    wpt_route_graph - list of waypoints forming the route of the drone in the graph
+                        if it is a delivery drone, it will include two lists: go and back
+
+    wpt_bsc2graph_dict - dictionary relating the names of the waypoints in bsk (keys)
+                        with the names in the graph (values)
+    '''
+
+    if type( wpt_route_graph[0] ) is list:
+        # Delivery case
+        for route in wpt_route_graph:
+            # clean route
+            route_clean = cleanRoute( route )
+            # select corresponding route
+            if route_clean[-1] == wpt_route_bsc[-1]:
+                # create dict
+                wpt_dict = createDictWpt( wpt_route_bsc, route_clean )
+            else:
+                continue
+    else:
+        # clean route
+        route_clean = cleanRoute( wpt_route_graph )
+        # create dict
+        wpt_dict = createDictWpt( wpt_route_bsc, route_clean )
+
+    return wpt_dict
+
+def cleanRoute( wpt_route_graph ):
+    wpt_route_graph_clean = copy.deepcopy( wpt_route_graph )
+
+    for wpt_graph in wpt_route_graph:
+        idx = wpt_route_graph_clean.index( wpt_graph )
+        if wpt_route_graph_clean[idx][1:] == wpt_route_graph_clean[idx - 1][1:]:
+            del wpt_route_graph_clean[idx]
+    del wpt_route_graph_clean[0]
+    return wpt_route_graph_clean
+
+def createDictWpt( wpt_route_bsc, wpt_route_graph_clean ):
+    wpt_dict = {}
+    for wpt_bsc, wpt_graph in zip( wpt_route_bsc, wpt_route_graph_clean ):
+        wpt_dict[wpt_bsc] = wpt_graph
+
+    return wpt_dict
 
 if __name__ == '__main__':
     pass

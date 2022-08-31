@@ -19,7 +19,7 @@ from bluesky.traffic.asas.statebased import StateBased
 from usepe.city_model.dynamic_segments import dynamicSegments
 from usepe.city_model.scenario_definition import createFlightPlan, createDeliveryFlightPlan, createSurveillanceFlightPlan
 from usepe.city_model.strategic_deconfliction import initialPopulation, deconflictedPathPlanning, deconflictedDeliveryPathPlanning, deconflictedSurveillancePathPlanning
-from usepe.city_model.utils import read_my_graphml, layersDict
+from usepe.city_model.utils import read_my_graphml, layersDict, wpt_bsc2wpt_graph
 from usepe.segmentation_service.segmentation_service import segmentationService
 import geopandas as gpd
 import numpy as np
@@ -187,7 +187,7 @@ class UsepeGraph( core.Entity ):
     def __init__( self, graph_path ):
         super().__init__()
 
-        self.graph = graph_path
+        # self.graph = graph_path
         self.graph = read_my_graphml( graph_path )
         self.layers_dict = layersDict( usepeconfig )
 
@@ -246,16 +246,6 @@ class UsepeSegments( core.Entity ):
         if not usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
             return updated, self.segments
 
-        # drone path
-        for i in range( self.recentpath.size ):
-            acrte = traf.ap.route[i]
-            iactwp = acrte.iactwp
-            temparr = np.empty_like( self.recentpath[i] )
-            currentpos = ( sim.simt, traf.lat[i], traf.lon[i], traf.alt[i], acrte.wpname[iactwp] )
-            temparr[-1] = currentpos
-            temparr[:-1] = self.recentpath[i][1:]
-            self.recentpath[i][:] = temparr
-
         update_interval = 300  # sec
 
         if sim.simt % update_interval == 0:
@@ -306,7 +296,7 @@ class UsepeSegments( core.Entity ):
                                                         self.recentpath,
                                                         None,
                                                         traf.id,
-                                                        usepegraph.node )  # tactical update rules
+                                                        usepegraph.graph )  # tactical update rules
 
             # TRAFIC #
             self.segmentation_service.update_traffic_strat( self.recentpath )
@@ -331,6 +321,24 @@ class UsepeSegments( core.Entity ):
         segments = self.segments
 
         return updated, segments
+
+    def calcRecentPath( self ):
+
+        # drone path
+        for i in range( self.recentpath.size ):
+
+            acrte = traf.ap.route[i]
+            iactwp = acrte.iactwp
+
+            wpt_dict = wpt_bsc2wpt_graph( acrte.wpname,
+                                          usepeflightplans.route_dict[traf.id[i]] )
+
+            temparr = np.empty_like( self.recentpath[i] )
+            currentpos = ( sim.simt, traf.lat[i], traf.lon[i], traf.alt[i],
+                           wpt_dict[acrte.wpname[iactwp]] )
+            temparr[-1] = currentpos
+            temparr[:-1] = self.recentpath[i][1:]
+            self.recentpath[i][:] = temparr
 
     def update( self ):  # Not used
         # stack.stack( 'ECHO Example update: import segments' )
@@ -371,10 +379,11 @@ class UsepeSegments( core.Entity ):
                 if altf < 0:
                     mask = usepeflightplans.flight_plan_df_back_up['ac'] == acid
                     altf = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['destination_alt']
-                    altf = traf.alt[idx]
 
                 orig = [lon0, lat0, alt0 ]
                 dest = [lonf, latf, altf ]
+                print( 'changed orig', orig, 'for', acid )
+                print( 'changed dest', dest, 'for', acid )
 
                 # We check which if the origin is in a no fly zone
                 cond = ( segments_df['lon_min'] <= lon0 ) & ( segments_df['lon_max'] > lon0 ) & \
@@ -410,6 +419,8 @@ class UsepeSegments( core.Entity ):
 
             # 4th. To update the flight plans in the queue
             usepeflightplans.reprocessFlightPlans()
+
+        self.calcRecentPath()
 
         return
 
