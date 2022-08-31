@@ -130,6 +130,9 @@ def droneAirspaceUsage( G, route, time, users_planned, initial_time, final_time,
     """
     users = users_planned.copy()
     actual_segment = None
+
+    segments_updated = []
+
     actual_time = time
     t0 = time
     tf = actual_time
@@ -137,6 +140,9 @@ def droneAirspaceUsage( G, route, time, users_planned, initial_time, final_time,
     for wpt2 in route:
         if not actual_segment:
             actual_segment = G.nodes[wpt2]['segment']
+
+            segments_updated += [actual_segment]
+
             step += 1
             continue
 
@@ -157,6 +163,8 @@ def droneAirspaceUsage( G, route, time, users_planned, initial_time, final_time,
             t0 = math.floor( actual_time )
             actual_segment = G.nodes[wpt2]['segment']
 
+            segments_updated += [actual_segment]
+
         step += 1
 
     try:
@@ -165,7 +173,7 @@ def droneAirspaceUsage( G, route, time, users_planned, initial_time, final_time,
     except:
         pass
 
-    return users
+    return users, segments_updated
 
 def droneAirspaceUsageDelivery( G, route, time, users_planned, initial_time, final_time,
                                 route_parameters, ac, hovering_time,
@@ -231,7 +239,7 @@ def droneAirspaceUsageDelivery( G, route, time, users_planned, initial_time, fin
     return users, tf + hovering_time
 
 
-def checkOverpopulatedSegment( segments, users, initial_time, final_time, analysed_time_window ):
+def checkOverpopulatedSegment( segments, users, initial_time, final_time, analysed_time_window, segments_updated=None ):
     """
     Check if any segment is overpopulated. It returns the segment name and the time when the segment
     gets overcrowded. If no segment is overpopulated, it retunrs None.
@@ -243,6 +251,7 @@ def checkOverpopulatedSegment( segments, users, initial_time, final_time, analys
                 study
             final_time (int): integer representing the final time in seconds of the period under
                 study
+            segments_updated (list): list indicating the segments used by the new drone
 
     Returns:
             overpopulated_segment (string): segment name
@@ -253,8 +262,14 @@ def checkOverpopulatedSegment( segments, users, initial_time, final_time, analys
     overpopulated_segment = None
     overpopulated_time = None
     cond = False
+
+    if segments_updated:
+        segments_reduced = segments[segments.index.isin( segments_updated )]
+    else:
+        segments_reduced = segments
+
     for i in range( analysed_time_window ):
-        for idx, row in segments.iterrows():
+        for idx, row in segments_reduced.iterrows():
             capacity = row['capacity']
             if users[str( idx )][i] > capacity:
                 overpopulated_segment = str( idx )
@@ -313,7 +328,7 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
 
     route_parameters = routeParameters( G, route, ac )
 
-    users_step = droneAirspaceUsage( G, route, delayed_time, users, initial_time, final_time,
+    users_step, segments_updated = droneAirspaceUsage( G, route, delayed_time, users, initial_time, final_time,
                                      route_parameters, ac,
                                      avg_flight_time )
 
@@ -322,7 +337,7 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
     overpopulated_segment, overpopulated_time = checkOverpopulatedSegment( 
         segments, users_step,
         initial_time + delayed_time, initial_time + delayed_time + avg_flight_time,
-        avg_flight_time )
+        avg_flight_time, segments_updated=segments_updated )
     print( 'Overpopulated segments time', tm.time() - start, 's' )
 
     segments_step = segments.copy()
@@ -354,13 +369,13 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
             # print( a / b )
             print( 'The flight is delayed {0} seconds'.format( delayed_time - time ) )
         else:
-            users_step = droneAirspaceUsage( G_step, route, delayed_time, users, initial_time,
+            users_step, segments_updated = droneAirspaceUsage( G_step, route, delayed_time, users, initial_time,
                                              final_time, route_parameters, ac )
 
             overpopulated_segment, overpopulated_time = checkOverpopulatedSegment( 
                 segments_step, users_step,
                 initial_time + delayed_time, initial_time + delayed_time + avg_flight_time,
-                avg_flight_time )
+                avg_flight_time, segments_updated=segments_updated )
 
     if delivery:
         users_step, departure2 = droneAirspaceUsageDelivery( G, route, delayed_time, users,
