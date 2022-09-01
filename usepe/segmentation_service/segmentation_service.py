@@ -331,20 +331,24 @@ class segmentationService:
         for ii in range( len( log_pos ) ):
             for jj in range( len( log_pos[ii] ) ):
                 if log_pos[ii][jj] != None:
-                    goal = city.nodes[log_pos[ii][jj][-1]]
-                    prev_goal = city.nodes[
-                        [
-                            plan[id[ii]][0][kk - 1]
-                            for kk in range( len( plan[id[ii]][0] ) )
-                            if ( plan[id[ii]][0][kk] == log_pos[ii][jj][-1] )
-                        ][0]
-                    ]
+                    #===============================================================================
+                    # goal = city.nodes[log_pos[ii][jj][-1]]
+                    # prev_goal = city.nodes[
+                    #     [
+                    #         plan[id[ii]][0][kk - 1]
+                    #         for kk in range( len( plan[id[ii]][0] ) )
+                    #         if ( plan[id[ii]][0][kk] == log_pos[ii][jj][-1] )
+                    #     ][0]
+                    # ]
+                    #===============================================================================
+                    goal = city.nodes[log_pos[ii][jj][-2]]
+                    prev_goal = city.nodes[log_pos[ii][jj][-1]]
                     traj = LineString( 
                         [
-                            Point( np.asarray( ( goal["x"], goal["y"], goal["z"] ) ).astype( float ) ),
+                            Point( np.asarray( ( goal["x"], goal["y"] ) ).astype( float ) ),
                             Point( 
                                 np.asarray( 
-                                    ( prev_goal["x"], prev_goal["y"], prev_goal["z"] )
+                                    ( prev_goal["x"], prev_goal["y"] )
                                 ).astype( float )
                             ),
                         ]
@@ -352,7 +356,7 @@ class segmentationService:
                     # check if deviation larger than threshold
                     if ( 
                         traj.distance( 
-                            Point( log_pos[ii][jj][2], log_pos[ii][jj][1], log_pos[ii][jj][3] )
+                            Point( log_pos[ii][jj][2], log_pos[ii][jj][1] )
                         )
                         > self.rules["wind_rules"]["path_dev_th"]
                     ):
@@ -467,15 +471,19 @@ class segmentationService:
         return cells
 
     def traffic_split( self, flight_log_pos ):
-        dur_sec = len( flight_log_pos[0] ) * np.mean( 
-            np.diff( 
-                [
-                    flight_log_pos[0][ii][0]
-                    for ii in range( len( flight_log_pos[0] ) )
-                    if flight_log_pos[0][ii] != None
-                ]
+        try:
+            dur_sec = len( flight_log_pos[0] ) * np.mean( 
+                np.diff( 
+                    [
+                        flight_log_pos[0][ii][0]
+                        for ii in range( len( flight_log_pos[0] ) )
+                        if flight_log_pos[0][ii] != None
+                    ]
+                )
             )
-        )
+        except IndexError:
+            # this happens when there are nodrones flying
+            dur_sec = 1
         # split cells with high occupancy to 8 sub-cells to test split rule
         for id in self.cells.index:
             if self.cells.at[id, "occupancy"] > 0:
