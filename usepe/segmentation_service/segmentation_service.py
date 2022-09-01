@@ -38,8 +38,8 @@ class segmentationService:
 
         self.cells["parent"] = None
         self.cells["children"] = None
-        self.cells["new"] = False
-        self.cells["updated"] = False
+        self.cells["new"] = True
+        self.cells["updated"] = True
 
         self.event_update = False
         return
@@ -67,8 +67,8 @@ class segmentationService:
         self.cells["children"] = None
         # add update properties
         self.cells["class_init"] = self.cells["class"].copy()
-        self.cells["new"] = False
-        self.cells["updated"] = False
+        self.cells["new"] = True
+        self.cells["updated"] = True
         self.cells["wind_avg"] = -1.0
         self.cells["wind_max"] = -1.0
         self.cells["turbulence"] = -1.0  # turbulence intensity
