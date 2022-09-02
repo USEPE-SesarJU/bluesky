@@ -54,7 +54,8 @@ def init_plugin():
 
     # ---------------------------------- DEFINED BY USER ------------------------------------
     # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\settings_exercise_1_reference.cfg"
-    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
+    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\test\settings_OSD_3.cfg"
+    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
     # config_path = r"/home/ror/ws/scenarios/scenario/USEPE/exercise_3/settings_exe_3_ref.cfg"
     # ------------------------------------------------------------------------------------------
 
@@ -1031,7 +1032,7 @@ class StateBasedUsepe( ConflictDetection ):
         toutconf = np.minimum( toutver, touthor )
 
         swconfl = np.array( swhorconf * ( tinconf <= toutconf ) * ( toutconf > 0.0 ) *
-                           np.asarray( tinconf < np.asmatrix( dtlookahead ).T ) * ( 1.0 - I ), dtype=np.bool )
+                           np.asarray( tinconf < np.asmatrix( dtlookahead ).T ) * ( 1.0 - I ), dtype=bool )
 
         # --------------------------------------------------------------------------
         # Update conflict lists
@@ -1052,8 +1053,8 @@ class StateBasedUsepe( ConflictDetection ):
 
         # print( 'confpairs_default' )
         # print( self.confpairs_default )
-        print( 'default' )
-        print( self.confpairs_default )
+        # print( 'default' )
+        # print( self.confpairs_default )
 
         if usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
 
@@ -1096,7 +1097,7 @@ class StateBasedUsepe( ConflictDetection ):
                                     time_to_react_list.extend( [0] )
                                 else:
                                     time_to_react_list.extend( self.checkTable( table, x, y, qdr_iter, own_gs_iter_table, int_gs_iter_table ) )
-                            print( time_to_react_list )
+
                             if time_to_react_list:
                                 time_to_react_all_list.extend( [min( time_to_react_list )] )
                         if time_to_react_all_list:
@@ -1117,8 +1118,8 @@ class StateBasedUsepe( ConflictDetection ):
             # Select conflicting pairs: each a/c gets their own record
             confpairs = [( ownship.id[i], ownship.id[j] ) for i, j in zip( *np.where( swconfl ) )]
 
-            print( 'confpairs' )
-            print( confpairs )
+            # print( 'confpairs' )
+            # print( confpairs )
 
         # print( 'confpairs' )
         # print( confpairs )
