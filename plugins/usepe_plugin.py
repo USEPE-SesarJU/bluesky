@@ -3,13 +3,14 @@
 from os import listdir
 from os.path import join
 from pathlib import Path
-import configparser
 import copy
 import datetime
 import math
 import os
 import pickle
 import time
+
+import configparser
 
 from bluesky import core, traf, stack, sim  # , settings, navdb,  scr, tools
 from bluesky.tools import geo
@@ -228,6 +229,9 @@ class UsepeSegments( core.Entity ):
 
         usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )
 
+        self.wpt_dict = {}
+        self.wpt_bsc = {}
+
         with self.settrafarrays():
             self.recentpath = np.array( [], dtype=np.ndarray )
 
@@ -300,6 +304,7 @@ class UsepeSegments( core.Entity ):
                                                         usepegraph.graph )  # tactical update rules
 
             # TRAFIC #
+
             self.segmentation_service.update_traffic_strat( self.recentpath )
             self.segmentation_service.update_traffic_tact( self.recentpath )
 
@@ -310,6 +315,7 @@ class UsepeSegments( core.Entity ):
             updated = True
             self.segmentation_service.export_cells()  # export .json file to "./data/examples"
             self.segments = pd.read_json( 'usepe/segmentation_service/data/examples/' + self.region + '.json', orient="records", lines=True )
+            print( 'Segments update completed.' )
 
         # The event rule is continuous
         self.segmentation_service.update_event( 'event', sim.simt )  # event update rule
@@ -331,15 +337,47 @@ class UsepeSegments( core.Entity ):
             acrte = traf.ap.route[i]
             iactwp = acrte.iactwp
 
-            wpt_dict = wpt_bsc2wpt_graph( acrte.wpname,
-                                          usepeflightplans.route_dict[traf.id[i]] )
+            wpt_dict = self.wpt_dict[traf.id[i]]
+
+            if list( wpt_dict.keys() ).index( acrte.wpname[iactwp] ) == 0:
+                prev_actwpt = acrte.wpname[iactwp]
+            else:
+                prev_actwpt = list( wpt_dict.keys() )[list( wpt_dict.keys() ).index( acrte.wpname[iactwp] ) - 1]
+                # prev_actwpt = acrte.wpname[iactwp - 1]
 
             temparr = np.empty_like( self.recentpath[i] )
             currentpos = ( sim.simt, traf.lat[i], traf.lon[i], traf.alt[i],
-                           wpt_dict[acrte.wpname[iactwp]] )
+                           wpt_dict[acrte.wpname[iactwp]], wpt_dict[prev_actwpt] )
             temparr[-1] = currentpos
             temparr[:-1] = self.recentpath[i][1:]
             self.recentpath[i][:] = temparr
+
+    def calcWptDict( self ):
+
+        for acid in traf.id:
+
+            i = traf.id2idx( acid )
+            acrte = traf.ap.route[i]
+            wpt_bsc = acrte.wpname
+
+            # If a new drone is created: update dict
+            if acid not in self.wpt_dict:
+                # Add entry in the dict
+                wpt_route_graph = usepeflightplans.route_dict[acid]
+                wpt_dict_acid = wpt_bsc2wpt_graph( acrte.wpname, wpt_route_graph )
+                self.wpt_dict[acid] = wpt_dict_acid
+            else:
+                # If the list of waypoints in bluesky changes: update dict
+                if wpt_bsc != self.wpt_bsc[acid]:
+                    wpt_route_graph = usepeflightplans.route_dict[acid]
+                    wpt_dict_acid = wpt_bsc2wpt_graph( acrte.wpname, wpt_route_graph )
+                    self.wpt_dict[acid] = wpt_dict_acid
+                else:
+                    # print( 'No change wpt_dict' )
+                    continue
+
+            self.wpt_bsc[acid] = wpt_bsc
+
 
     def update( self ):  # Not used
         # stack.stack( 'ECHO Example update: import segments' )
@@ -421,6 +459,7 @@ class UsepeSegments( core.Entity ):
             # 4th. To update the flight plans in the queue
             usepeflightplans.reprocessFlightPlans()
 
+        self.calcWptDict()
         self.calcRecentPath()
 
         return
@@ -1032,7 +1071,11 @@ class StateBasedUsepe( ConflictDetection ):
         toutconf = np.minimum( toutver, touthor )
 
         swconfl = np.array( swhorconf * ( tinconf <= toutconf ) * ( toutconf > 0.0 ) *
+<<<<<<< HEAD
                            np.asarray( tinconf < np.asmatrix( dtlookahead ).T ) * ( 1.0 - I ), dtype=bool )
+=======
+                           np.asarray( tinconf < np.asmatrix( dtlookahead ).T ) * ( 1.0 - I ), dtype=np.bool_ )
+>>>>>>> branch 'd2c2_plugin_develop_segmentation_integration' of https://github.com/USEPE-SesarJU/bluesky.git
 
         # --------------------------------------------------------------------------
         # Update conflict lists
