@@ -3,14 +3,13 @@
 from os import listdir
 from os.path import join
 from pathlib import Path
+import configparser
 import copy
 import datetime
 import math
 import os
 import pickle
 import time
-
-import configparser
 
 from bluesky import core, traf, stack, sim  # , settings, navdb,  scr, tools
 from bluesky.tools import geo
@@ -1071,11 +1070,7 @@ class StateBasedUsepe( ConflictDetection ):
         toutconf = np.minimum( toutver, touthor )
 
         swconfl = np.array( swhorconf * ( tinconf <= toutconf ) * ( toutconf > 0.0 ) *
-<<<<<<< HEAD
                            np.asarray( tinconf < np.asmatrix( dtlookahead ).T ) * ( 1.0 - I ), dtype=bool )
-=======
-                           np.asarray( tinconf < np.asmatrix( dtlookahead ).T ) * ( 1.0 - I ), dtype=np.bool_ )
->>>>>>> branch 'd2c2_plugin_develop_segmentation_integration' of https://github.com/USEPE-SesarJU/bluesky.git
 
         # --------------------------------------------------------------------------
         # Update conflict lists
