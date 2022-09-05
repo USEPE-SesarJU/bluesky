@@ -54,8 +54,8 @@ def init_plugin():
 
     # ---------------------------------- DEFINED BY USER ------------------------------------
     # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\settings_exercise_1_reference.cfg"
-    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\test\settings_OSD_3.cfg"
-    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
+    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\test\settings_OSD_3.cfg"
+    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
     # config_path = r"/home/ror/ws/scenarios/scenario/USEPE/exercise_3/settings_exe_3_ref.cfg"
     # ------------------------------------------------------------------------------------------
 
@@ -221,6 +221,7 @@ class UsepeSegments( core.Entity ):
         # Initialise class of dynamic segmentation - it provides the initial segments
         # Include the region for input
         self.region = "Hannover"
+
         self.segmentation_service = segmentationService( self.region )
         self.segmentation_service.export_cells()  # export .json file to "./data/examples"
 
@@ -234,6 +235,8 @@ class UsepeSegments( core.Entity ):
         with self.settrafarrays():
             self.recentpath = np.array( [], dtype=np.ndarray )
 
+        self.printRedSegments()
+
     def create( self, n=1 ):
         super().create( n )
 
@@ -241,6 +244,26 @@ class UsepeSegments( core.Entity ):
 
         positions = math.ceil( path_recording_time / updateInterval )
         self.recentpath[-n:] = [np.empty( positions, dtype=tuple ) for _ in range( n )]
+
+    def printRedSegments( self ):
+        df_red_cell = self.segmentation_service.cells.loc[self.segmentation_service.cells["class"] == 'red']
+
+        for row in df_red_cell.iterrows():
+            # print( 'POLY '.format( row[0], row[1]["geometry"] ) )
+            try:
+                shapelist = list( row[1]["geometry"].exterior.coords )
+            except AttributeError:
+                shapelist = list( row[1]["geometry"].coords )
+            # print( shapelist )  # list of tuples
+            aux = []
+            for el in shapelist:
+                aux.append( ( el[1], el[0] ) )
+            # print( aux )
+            aux = str( aux ).replace( "[", "" ).replace( "]", "" ).replace( "(", "" ).replace( ")", "" ).replace( ",", "" )
+            # print( aux )
+            # print( 'POLY pol{} {}'.format( row[0], aux ) )
+            stack.stack( 'POLY pol{} {}'.format( row[0], aux )
+                         )
 
     def dynamicSegments( self ):
         """
@@ -792,6 +815,7 @@ class UsepeDroneCommands( core.Entity ):
             usepeflightplans.flight_plan_df_back_up = pd.concat( [usepeflightplans.flight_plan_df_back_up, df_row] )
 
     def droneLanding( self, acid ):
+        print( 'Drone {} is landing'.format( acid ) )
         stack.stack( 'SPD {} 0'.format( acid ) )
         stack.stack( '{} ATSPD 0 {} ALT 0'.format( acid, acid ) )
         stack.stack( '{} ATALT 0 DEL {}'.format( acid, acid ) )
