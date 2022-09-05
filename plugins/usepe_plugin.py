@@ -453,6 +453,9 @@ class UsepeSegments( core.Entity ):
 
                 if segments_df[cond].empty:
                     segment_name_0 = 'N/A'
+                    # origin is not within any segment
+                    usepedronecommands.droneLanding( acid )
+                    continue
                 else:
                     segment_name_0 = segments_df[cond].index[0]
 
@@ -463,6 +466,9 @@ class UsepeSegments( core.Entity ):
 
                 if segments_df[cond].empty:
                     segment_name_f = 'N/A'
+                    # origin is not within any segment
+                    usepedronecommands.droneLanding( acid )
+                    continue
                 else:
                     segment_name_f = segments_df[cond].index[0]
 
@@ -891,12 +897,16 @@ class UsepeFlightPlan( core.Entity ):
             # print( usepesegments.segments['class'][segment_name_0] )
             # print( usepesegments.segments['class'][segment_name_f] )
 
-            if ( usepesegments.segments['speed_max'][segment_name_0] == 0 ) | ( usepesegments.segments['speed_max'][segment_name_f] == 0 ):
-                # origin or destination is not allowed, so the flight plan is rejected
+            if ( segment_name_0 == 'N/A' ) | ( segment_name_f == 'N/A' ):
+                # origin or destination is not within any segment
                 self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
             else:
-                usepestrategic.strategicDeconflictionDrone( df_row )
-                self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
+                if ( usepesegments.segments['speed_max'][segment_name_0] == 0 ) | ( usepesegments.segments['speed_max'][segment_name_f] == 0 ):
+                    # origin or destination is not allowed, so the flight plan is rejected
+                    self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
+                else:
+                    usepestrategic.strategicDeconflictionDrone( df_row )
+                    self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
 
     def reprocessFlightPlans( self ):
         """
@@ -938,12 +948,16 @@ class UsepeFlightPlan( core.Entity ):
             else:
                 segment_name_f = segments_df[cond].index[0]
 
-            if ( usepesegments.segments['speed_max'][segment_name_0] == 0 ) | ( usepesegments.segments['speed_max'][segment_name_f] == 0 ):
-                # origin or destination is not allowed, so the flight plan is rejected
+            if ( segment_name_0 == 'N/A' ) | ( segment_name_f == 'N/A' ):
+                # origin or destination is not within any segment
                 previous_df = previous_df.drop( previous_df.index[0] )
             else:
-                usepestrategic.strategicDeconflictionDrone( df_row, new=False )
-                previous_df = previous_df.drop( previous_df.index[0] )
+                if ( usepesegments.segments['speed_max'][segment_name_0] == 0 ) | ( usepesegments.segments['speed_max'][segment_name_f] == 0 ):
+                    # origin or destination is not allowed, so the flight plan is rejected
+                    previous_df = previous_df.drop( previous_df.index[0] )
+                else:
+                    usepestrategic.strategicDeconflictionDrone( df_row, new=False )
+                    previous_df = previous_df.drop( previous_df.index[0] )
 
 
     def update( self ):  # Not used
