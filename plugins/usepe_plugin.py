@@ -3,14 +3,13 @@
 from os import listdir
 from os.path import join
 from pathlib import Path
+import configparser
 import copy
 import datetime
 import math
 import os
 import pickle
 import time
-
-import configparser
 
 from bluesky import core, traf, stack, sim  # , settings, navdb,  scr, tools
 from bluesky.tools import geo
@@ -460,6 +459,9 @@ class UsepeSegments( core.Entity ):
 
         self.calcWptDict()
         self.calcRecentPath()
+
+        self.segmentation_service.cells["new"] = False
+        self.segmentation_service.cells["updated"] = False
 
         return
 
