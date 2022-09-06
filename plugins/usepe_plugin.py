@@ -260,9 +260,12 @@ class UsepeSegments( core.Entity ):
                 aux.append( ( el[1], el[0] ) )
             # print( aux )
             aux = str( aux ).replace( "[", "" ).replace( "]", "" ).replace( "(", "" ).replace( ")", "" ).replace( ",", "" )
+            el_aux = str( ( el[1], el[0] ) ).replace( "[", "" ).replace( "]", "" ).replace( "(", "" ).replace( ")", "" ).replace( ",", "" )
             # print( aux )
             # print( 'POLY pol{} {}'.format( row[0], aux ) )
             stack.stack( 'POLY pol{} {}'.format( row[0], aux )
+                         )
+            stack.stack( 'DEFWPT pol{} {}'.format( row[0], el_aux )
                          )
 
     def dynamicSegments( self ):
