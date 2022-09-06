@@ -230,6 +230,7 @@ class UsepeSegments( core.Entity ):
 
         self.wpt_dict = {}
         self.wpt_bsc = {}
+        self.strategic_wind_updated = False
 
         with self.settrafarrays():
             self.recentpath = np.array( [], dtype=np.ndarray )
@@ -295,7 +296,9 @@ class UsepeSegments( core.Entity ):
 
             # WIND #
             wind_file = usepeconfig['Segmentation service']['wind_path']
-            self.segmentation_service.update_wind_strat( wind_file, False )  # strategic update rules based on wind data
+            if not self.strategic_wind_updated:
+                self.segmentation_service.update_wind_strat( wind_file, False )  # strategic update rules based on wind data
+                self.strategic_wind_updated = True
             self.segmentation_service.update_wind_tact( usepeflightplans.route_dict,
                                                         self.recentpath,
                                                         None,
@@ -798,6 +801,7 @@ class UsepeDroneCommands( core.Entity ):
             usepeflightplans.flight_plan_df_back_up = pd.concat( [usepeflightplans.flight_plan_df_back_up, df_row] )
 
     def droneLanding( self, acid ):
+        print( ' Drone: {} is landing'.format( acid ) )
         stack.stack( 'SPD {} 0'.format( acid ) )
         stack.stack( '{} ATSPD 0 {} ALT 0'.format( acid, acid ) )
         stack.stack( '{} ATALT 0 DEL {}'.format( acid, acid ) )

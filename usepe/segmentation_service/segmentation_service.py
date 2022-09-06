@@ -464,10 +464,13 @@ class segmentationService:
                                 ( flight_log_pos[i_uav][t][3] > cells.iloc[cid[ind]]["z_min"] )
                                 and ( flight_log_pos[i_uav][t][3] < cells.iloc[cid[ind]]["z_max"] )
                             )
-                        ][0]
+                        ]
 
-                    if cid >= 0:
-                        cells.at[cells.index[cid], "occupancy"] += 1
+                        if len( cid ) > 0:
+                            cid = cid[0]
+
+                            cells.at[cells.index[cid], "occupancy"] += 1
+
         return cells
 
     def traffic_split( self, flight_log_pos ):

@@ -231,11 +231,12 @@ def wpt_bsc2wpt_graph( wpt_route_bsc, wpt_route_graph ):
 def cleanRoute( wpt_route_graph ):
     wpt_route_graph_clean = copy.deepcopy( wpt_route_graph )
 
-    for wpt_graph in wpt_route_graph:
+    for wpt_graph in wpt_route_graph[1:]:
         idx = wpt_route_graph_clean.index( wpt_graph )
         if wpt_route_graph_clean[idx][1:] == wpt_route_graph_clean[idx - 1][1:]:
             del wpt_route_graph_clean[idx]
-    del wpt_route_graph_clean[0]
+    if len( wpt_route_graph_clean ) > 1:
+        del wpt_route_graph_clean[0]
     return wpt_route_graph_clean
 
 def createDictWpt( wpt_route_bsc, wpt_route_graph_clean ):
