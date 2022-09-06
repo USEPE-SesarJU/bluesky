@@ -37,7 +37,7 @@ def initialPopulation( segments, t0, tf ):
     users = {}
     empty_list = [0 for i in range( tf - t0 )]
     for idx, row in segments.iterrows():
-        users[str( idx )] = empty_list
+        users[idx] = empty_list
 
     return users
 
@@ -269,7 +269,7 @@ def checkOverpopulatedSegment( segments, users, initial_time, final_time, segmen
     for i in range( final_time - initial_time ):
         for idx, row in segments_reduced.iterrows():
             capacity = row['capacity']
-            if users[str( idx )][i] > capacity:
+            if users[idx][i] > capacity:
                 overpopulated_segment = str( idx )
                 overpopulated_time = i
                 cond = True
@@ -341,8 +341,8 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
     G_step = G.copy()
     while overpopulated_segment:
         if type( overpopulated_segment ) == str:
-            segments_step['speed_max'][overpopulated_segment] = 0
-            segments_step['updated'][overpopulated_segment] = True
+            segments_step['speed_max'][int( overpopulated_segment )] = 0
+            segments_step['updated'][int( overpopulated_segment )] = True
 
             G_step, segments_step = dynamicSegments( G_step, None, segments_step )
 

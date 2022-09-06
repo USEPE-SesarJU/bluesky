@@ -19,7 +19,7 @@ from bluesky.traffic.asas.statebased import StateBased
 from usepe.city_model.dynamic_segments import dynamicSegments
 from usepe.city_model.scenario_definition import createFlightPlan, createDeliveryFlightPlan, createSurveillanceFlightPlan
 from usepe.city_model.strategic_deconfliction import initialPopulation, deconflictedPathPlanning, deconflictedDeliveryPathPlanning, deconflictedSurveillancePathPlanning
-from usepe.city_model.utils import read_my_graphml, layersDict, wpt_bsc2wpt_graph
+from usepe.city_model.utils import read_my_graphml, layersDict, wpt_bsc2wpt_graph, nearestNode3d
 from usepe.segmentation_service.segmentation_service import segmentationService
 import geopandas as gpd
 import numpy as np
@@ -54,8 +54,8 @@ def init_plugin():
 
     # ---------------------------------- DEFINED BY USER ------------------------------------
     # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\settings_exercise_1_reference.cfg"
-    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\test\settings_OSD_3.cfg"
-    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
+    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\test\settings_OSD_3.cfg"
+    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
     # config_path = r"/home/ror/ws/scenarios/scenario/USEPE/exercise_3/settings_exe_3_ref.cfg"
     # ------------------------------------------------------------------------------------------
 
@@ -878,24 +878,30 @@ class UsepeFlightPlan( core.Entity ):
             dest = [row['destination_lon'], row['destination_lat'], row['destination_alt'] ]
 
             # We check if the origin/destination is in a no fly zone
-            cond = ( segments_df['lon_min'] <= orig[0] ) & ( segments_df['lon_max'] > orig[0] ) & \
-                ( segments_df['lat_min'] <= orig[1] ) & ( segments_df['lat_max'] > orig[1] ) & \
-                ( segments_df['z_min'] <= orig[2] ) & ( segments_df['z_max'] > orig[2] )
+            # cond = ( segments_df['lon_min'] <= orig[0] ) & ( segments_df['lon_max'] > orig[0] ) & \
+            #     ( segments_df['lat_min'] <= orig[1] ) & ( segments_df['lat_max'] > orig[1] ) & \
+            #     ( segments_df['z_min'] <= orig[2] ) & ( segments_df['z_max'] > orig[2] )
+            #
+            # if segments_df[cond].empty:
+            #     segment_name_0 = 'N/A'
+            # else:
+            #     segment_name_0 = segments_df[cond].index[0]
 
-            if segments_df[cond].empty:
-                segment_name_0 = 'N/A'
-            else:
-                segment_name_0 = segments_df[cond].index[0]
+            orig_node = nearestNode3d( usepegraph.graph, lon=orig[0], lat=orig[1], altitude=orig[2] )
+            segment_name_0 = usepegraph.graph.nodes[orig_node]['segment']
 
             # We check which is the destination is in a no fly zone
-            cond = ( segments_df['lon_min'] <= dest[0] ) & ( segments_df['lon_max'] > dest[0] ) & \
-                ( segments_df['lat_min'] <= dest[1] ) & ( segments_df['lat_max'] > dest[1] ) & \
-                ( segments_df['z_min'] <= dest[2] ) & ( segments_df['z_max'] > dest[2] )
+            # cond = ( segments_df['lon_min'] <= dest[0] ) & ( segments_df['lon_max'] > dest[0] ) & \
+            #     ( segments_df['lat_min'] <= dest[1] ) & ( segments_df['lat_max'] > dest[1] ) & \
+            #     ( segments_df['z_min'] <= dest[2] ) & ( segments_df['z_max'] > dest[2] )
+            #
+            # if segments_df[cond].empty:
+            #     segment_name_f = 'N/A'
+            # else:
+            #     segment_name_f = segments_df[cond].index[0]
 
-            if segments_df[cond].empty:
-                segment_name_f = 'N/A'
-            else:
-                segment_name_f = segments_df[cond].index[0]
+            dest_node = nearestNode3d( usepegraph.graph, lon=dest[0], lat=dest[1], altitude=dest[2] )
+            segment_name_f = usepegraph.graph.nodes[dest_node]['segment']
 
             # print( usepesegments.segments['class'][segment_name_0] )
             # print( usepesegments.segments['class'][segment_name_f] )
@@ -932,24 +938,30 @@ class UsepeFlightPlan( core.Entity ):
             dest = [row['destination_lon'], row['destination_lat'], row['destination_alt'] ]
 
             # We check if the origin/destination is in a no fly zone
-            cond = ( segments_df['lon_min'] <= orig[0] ) & ( segments_df['lon_max'] > orig[0] ) & \
-                ( segments_df['lat_min'] <= orig[1] ) & ( segments_df['lat_max'] > orig[1] ) & \
-                ( segments_df['z_min'] <= orig[2] ) & ( segments_df['z_max'] > orig[2] )
+            # cond = ( segments_df['lon_min'] <= orig[0] ) & ( segments_df['lon_max'] > orig[0] ) & \
+            #     ( segments_df['lat_min'] <= orig[1] ) & ( segments_df['lat_max'] > orig[1] ) & \
+            #     ( segments_df['z_min'] <= orig[2] ) & ( segments_df['z_max'] > orig[2] )
+            #
+            # if segments_df[cond].empty:
+            #     segment_name_0 = 'N/A'
+            # else:
+            #     segment_name_0 = segments_df[cond].index[0]
 
-            if segments_df[cond].empty:
-                segment_name_0 = 'N/A'
-            else:
-                segment_name_0 = segments_df[cond].index[0]
+            orig_node = nearestNode3d( usepegraph.graph, lon=orig[0], lat=orig[1], altitude=orig[2] )
+            segment_name_0 = usepegraph.graph.nodes[orig_node]['segment']
 
             # We check which is the destination is in a no fly zone
-            cond = ( segments_df['lon_min'] <= dest[0] ) & ( segments_df['lon_max'] > dest[0] ) & \
-                ( segments_df['lat_min'] <= dest[1] ) & ( segments_df['lat_max'] > dest[1] ) & \
-                ( segments_df['z_min'] <= dest[2] ) & ( segments_df['z_max'] > dest[2] )
+            # cond = ( segments_df['lon_min'] <= dest[0] ) & ( segments_df['lon_max'] > dest[0] ) & \
+            #     ( segments_df['lat_min'] <= dest[1] ) & ( segments_df['lat_max'] > dest[1] ) & \
+            #     ( segments_df['z_min'] <= dest[2] ) & ( segments_df['z_max'] > dest[2] )
+            #
+            # if segments_df[cond].empty:
+            #     segment_name_f = 'N/A'
+            # else:
+            #     segment_name_f = segments_df[cond].index[0]
 
-            if segments_df[cond].empty:
-                segment_name_f = 'N/A'
-            else:
-                segment_name_f = segments_df[cond].index[0]
+            dest_node = nearestNode3d( usepegraph.graph, lon=dest[0], lat=dest[1], altitude=dest[2] )
+            segment_name_f = usepegraph.graph.nodes[dest_node]['segment']
 
             if ( segment_name_0 == 'N/A' ) | ( segment_name_f == 'N/A' ):
                 # origin or destination is not within any segment
