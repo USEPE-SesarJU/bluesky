@@ -233,6 +233,9 @@ class UsepeSegments( core.Entity ):
         self.wpt_bsc = {}
         self.strategic_wind_updated = False
 
+        # list with polygons printed: red segments
+        self.poly_printed = []
+
         with self.settrafarrays():
             self.recentpath = np.array( [], dtype=np.ndarray )
 
@@ -248,6 +251,11 @@ class UsepeSegments( core.Entity ):
 
     def printRedSegments( self ):
         df_red_cell = self.segmentation_service.cells.loc[self.segmentation_service.cells["class"] == 'red']
+
+        for pol in self.poly_printed:
+            stack.stack( 'DEL pol{}'.format( pol ) )
+
+        self.poly_printed = []
 
         for row in df_red_cell.iterrows():
             # print( 'POLY '.format( row[0], row[1]["geometry"] ) )
@@ -265,6 +273,8 @@ class UsepeSegments( core.Entity ):
             # print( 'POLY pol{} {}'.format( row[0], aux ) )
             stack.stack( 'POLY pol{} {}'.format( row[0], aux )
                          )
+
+            self.poly_printed += [row[0]]
 
     def dynamicSegments( self ):
         """
@@ -437,6 +447,9 @@ class UsepeSegments( core.Entity ):
 
         if updated:
             # TODO: Perform all the activities associated to the segmetns update
+
+            # Print red segments
+            self.printRedSegments()
 
             # 1st:  to update the graph
             usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )
