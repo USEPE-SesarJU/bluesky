@@ -54,8 +54,8 @@ def init_plugin():
 
     # ---------------------------------- DEFINED BY USER ------------------------------------
     # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\settings_exercise_1_reference.cfg"
-    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\test\settings_OSD_3.cfg"
-    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
+    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\test\settings_OSD_3.cfg"
+    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
     # config_path = r"/home/ror/ws/scenarios/scenario/USEPE/exercise_3/settings_exe_3_ref.cfg"
     # ------------------------------------------------------------------------------------------
 
@@ -70,7 +70,7 @@ def init_plugin():
     usepeconfig.read( config_path )
 
     graph_path = usepeconfig['BlueSky']['graph_path']
-    segment_path = usepeconfig['BlueSky']['segment_path']
+    # segment_path = usepeconfig['BlueSky']['segment_path']
     flight_plan_csv_path = usepeconfig['BlueSky']['flight_plan_csv_path']
 
     initial_time = int( usepeconfig['BlueSky']['initial_time'] )
@@ -78,7 +78,7 @@ def init_plugin():
 
     usepegraph = UsepeGraph( graph_path )
     # print( ' - Graph initialised - ' )
-    usepesegments = UsepeSegments( segment_path )
+    usepesegments = UsepeSegments()
     # print( ' - Segments initialised - ' )
     usepestrategic = UsepeStrategicDeconfliction( initial_time, final_time )
     # print( ' - Strategic deconfliction initialised - ' )
@@ -212,7 +212,7 @@ class UsepeSegments( core.Entity ):
     iii) routes in the strategic phase
     '''
 
-    def __init__( self, segment_path ):
+    def __init__( self ):
         super().__init__()
 
         # with open( segment_path, 'rb' ) as f:
@@ -361,18 +361,42 @@ class UsepeSegments( core.Entity ):
 
             acrte = traf.ap.route[i]
             iactwp = acrte.iactwp
-
-            wpt_dict = self.wpt_dict[traf.id[i]]
-
-            if list( wpt_dict.keys() ).index( acrte.wpname[iactwp] ) == 0:
-                prev_actwpt = acrte.wpname[iactwp]
+            # actwpt = acrte.wpname[iactwp]
+            # wpt_dict = self.wpt_dict[traf.id[i]]
+            if acrte.wpalt[iactwp] < 0:
+                actwpt_alt = traf.ap.alt[i]
             else:
-                prev_actwpt = list( wpt_dict.keys() )[list( wpt_dict.keys() ).index( acrte.wpname[iactwp] ) - 1]
-                # prev_actwpt = acrte.wpname[iactwp - 1]
+                actwpt_alt = acrte.wpalt[iactwp]
+
+            actwpt = nearestNode3d( usepegraph.graph,
+                                    acrte.wplon[iactwp],
+                                    acrte.wplat[iactwp],
+                                    actwpt_alt,
+                                    exclude_corridor=False )
+
+            if iactwp == 0:
+                i_prevactwpt = iactwp
+            else:
+                i_prevactwpt = iactwp - 1
+                # prev_actwpt = list( wpt_dict.keys() )[list( wpt_dict.keys() ).index( acrte.wpname[iactwp] ) - 1]
+            if acrte.wpalt[i_prevactwpt] < 0:
+                actwpt_alt = traf.ap.alt[i]
+            else:
+                actwpt_alt = acrte.wpalt[i_prevactwpt]
+            prev_actwpt = nearestNode3d( usepegraph.graph,
+                                         acrte.wplon[i_prevactwpt],
+                                         acrte.wplat[i_prevactwpt],
+                                         acrte.wpalt[i_prevactwpt],
+                                         exclude_corridor=False )
 
             temparr = np.empty_like( self.recentpath[i] )
+            #=======================================================================================
+            # currentpos = ( sim.simt, traf.lat[i], traf.lon[i], traf.alt[i],
+            #                wpt_dict[acrte.wpname[iactwp]], wpt_dict[prev_actwpt] )
+            #=======================================================================================
+
             currentpos = ( sim.simt, traf.lat[i], traf.lon[i], traf.alt[i],
-                           wpt_dict[acrte.wpname[iactwp]], wpt_dict[prev_actwpt] )
+                           actwpt, prev_actwpt )
             temparr[-1] = currentpos
             temparr[:-1] = self.recentpath[i][1:]
             self.recentpath[i][:] = temparr
@@ -909,10 +933,12 @@ class UsepeFlightPlan( core.Entity ):
             if ( segment_name_0 == 'N/A' ) | ( segment_name_f == 'N/A' ):
                 # origin or destination is not within any segment
                 self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
+                print( 'Origin or destination is not within any segment' )
             else:
                 if ( usepesegments.segments['speed_max'][segment_name_0] == 0 ) | ( usepesegments.segments['speed_max'][segment_name_f] == 0 ):
                     # origin or destination is not allowed, so the flight plan is rejected
                     self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
+                    print( 'Origin or destination is not allowed, so the flight plan is rejected' )
                 else:
                     usepestrategic.strategicDeconflictionDrone( df_row )
                     self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )

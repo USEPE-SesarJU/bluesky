@@ -82,8 +82,7 @@ def layersDict( config ):
 
     return layers_dict
 
-
-def nearestNode3d( G, lon, lat, altitude ):
+def nearestNode3d( G, lon, lat, altitude, exclude_corridor=True ):
     '''
     This function gets the closest node of the city graph nodes with respect
     to a given reference point (lat, lon, alt)
@@ -100,7 +99,10 @@ def nearestNode3d( G, lon, lat, altitude ):
     '''
     # The nodes are filtered to exclude corridor nodes
     nodes = list( G.nodes )
-    filtered_latlon = list( filter( lambda node: str( node )[:3] != 'COR', nodes ) )
+    if exclude_corridor:
+        filtered_latlon = list( filter( lambda node: str( node )[:3] != 'COR', nodes ) )
+    else:
+        filtered_latlon = nodes
     # Iterates to get the closest one
     nearest_node = filtered_latlon[0]
     delta_xyz = ( ( G.nodes[nearest_node]['z'] - altitude ) ** 2 +
