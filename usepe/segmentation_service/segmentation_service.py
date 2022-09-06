@@ -92,30 +92,31 @@ class segmentationService:
         self.region, _ = polygons.orthogonal_bounds( region, self.rules["min_grid"] )
         return
 
-    def fill_vertical(self):
+    def fill_vertical( self ):
         fill_cells = []
         for name, data in self.rules["classes"].items():
             if self.rules["classes"][name]["altitude"][0] > self.rules["vll"][0]:
                 floor_cells = self.cells.loc[self.cells["class"] == name]
-                if len(floor_cells) > 0:
+                if len( floor_cells ) > 0:
                     floor_cells.loc[:, "z_max"] = floor_cells.loc[:, "z_min"]
                     floor_cells.loc[:, "z_min"] = self.rules["vll"][0]
-                    fill_cells.append(floor_cells)
+                    fill_cells.append( floor_cells )
             if self.rules["classes"][name]["altitude"][1] < self.rules["vll"][1]:
                 ceil_cells = self.cells.loc[self.cells["class"] == name]
-                if len(ceil_cells) > 0:
+                if len( ceil_cells ) > 0:
                     ceil_cells.loc[:, "z_min"] = ceil_cells.loc[:, "z_max"]
                     ceil_cells.loc[:, "z_max"] = self.rules["vll"][1]
-                    fill_cells.append(ceil_cells)
-        fill_cells = pd.concat(fill_cells)
-        fill_cells.index = range(
-            self.cells.index.max() + 1, self.cells.index.max() + len(fill_cells) + 1
-        )
-        self.cells = pd.concat([self.cells, fill_cells])
-        for id in fill_cells.index:
-            self.close_cell(id)
+                    fill_cells.append( ceil_cells )
+        if fill_cells:
+            fill_cells = pd.concat( fill_cells )
+            fill_cells.index = range( 
+                self.cells.index.max() + 1, self.cells.index.max() + len( fill_cells ) + 1
+            )
+            self.cells = pd.concat( [self.cells, fill_cells] )
+            for id in fill_cells.index:
+                self.close_cell( id )
         return
-        
+
     def eval_capacity_km_sq( self ):
         capDensity = float( self.rules["capacity_km_sq"] )
         for name, data in self.rules["classes"].items():
@@ -618,7 +619,7 @@ class segmentationService:
                 ( self.rules["event_rules"]["event_data_folder"] + event + ".geojson" ),
                 driver="GeoJSON",
             )
-        if now < event.at[0, "end"]:
+        if now <= event.at[0, "end"]:
             # self.event_instance(event, now)
 
             # p = Process(target=self.event_instance, args=(event, now))
