@@ -3,7 +3,7 @@
 	"capacity_km_sq": 100,
 	"capacity_m_3": 0.000001,
 	"building_layer": 92, 
-	"aspect_ratio": 2.0,
+	"aspect_ratio": 3.0,
 	"min_grid": 0.001,
 	"close_class": "red",
 	"allowed_uas_speed": [5.0,10.0,15.0,20.0],
@@ -25,10 +25,10 @@
     "classes": {
         "black": { "enter": false,  "altitude": [0, 500], "velocity": [0, 0], "capacity_factor": 0.0  },
         "red": { "enter": false,  "altitude": [0, 500], "velocity": [0, 0], "capacity_factor": 0.0  },
-        "yellow": { "enter": { "rnp": 0.1 }, "altitude": [0, 500], "velocity": [0, 10], "capacity_factor": 0.5 },
+        "yellow": { "enter": { "rnp": 0.1 }, "altitude": [0, 500], "velocity": [10, 100], "capacity_factor": 0.5 },
         "green": { "enter": true, "altitude": [0, 500], "velocity": [0, 10], "capacity_factor": 1.0 },
-        "grey": { "enter": { "rnp": 0.5, "tmz": true, "rmz": true }, "altitude": [0, 500], "velocity": [1, 10], "capacity_factor": 1.0 },
-        "white": { "enter": true , "altitude": [0, 500], "velocity": [0, 20], "capacity_factor": 1.0 }
+        "grey": { "enter": { "rnp": 0.5, "tmz": true, "rmz": true }, "altitude": [0, 400], "velocity": [1, 10], "capacity_factor": 1.0 },
+        "white": { "enter": true , "altitude": [0, 500], "velocity": [0, 100], "capacity_factor": 1.0 }
     },
     "ground": {
         "aerodrome": {

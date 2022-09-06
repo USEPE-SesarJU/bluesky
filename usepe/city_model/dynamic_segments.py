@@ -119,6 +119,7 @@ def selectNodesWithNewSegments( G, segments, deleted_segments ):
 
     """
     new_segments = list( segments.index )
+    deleted_segments = list( deleted_segments.index )
     nodes = ox.graph_to_gdfs( G, edges=False, node_geometry=False )
 
     # When a node is created for first time, the segment parameter is "new". So, the condition
@@ -128,7 +129,7 @@ def selectNodesWithNewSegments( G, segments, deleted_segments ):
     cond = cond | ( nodes['segment'].isin( new_segments ) )
     # Nodes belonging to deleted segments
     if deleted_segments is not None:
-        cond = cond | ( nodes['segment'].isin( deleted_segments ) )
+        cond = cond | ( ~nodes['segment'].isin( deleted_segments ) )
 
     df = nodes[cond]
     return df.index
@@ -203,13 +204,15 @@ def updateSegmentVelocity( G, segments ):
 
     edges = ox.utils_graph.graph_to_gdfs( G, nodes=False, fill_edge_geometry=False )
 
-    cond = edges['segment'] == 'N/A'
-
-    cond = cond | ( edges['segment'].isin( updated_segments ) )
+    cond = ( edges['segment'].isin( updated_segments ) )
 
     pd.set_option( 'mode.chained_assignment', None )
     edges['speed'][cond] = edges[cond]['segment'].apply( lambda segment_name:
                                                          segments.loc[segment_name]['speed_max'] )
+
+    cond = edges['segment'] == 'N/A'
+
+    edges['speed'][cond] = edges[cond]['segment'].apply( lambda segment_name: 0 )
 
     nx.set_edge_attributes( G, values=edges["speed"], name="speed" )
     return G
@@ -349,12 +352,14 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
     # these segments
     new_segments = segments_df[segments_df['new'] == True ]
 
+    deleted_segments = segments_df[segments_df['new'] != True ]
+
     # Assign segments
     G = assignSegmet2Edge( G, new_segments, deleted_segments )
 
     # We select only the updated segments. The speed update of segments is performed only in
     # these segments
-    updated_segments = segments_df[segments_df['updated'] == True ]
+    updated_segments = segments_df[( segments_df['updated'] == True ) | ( segments_df['new'] == True ) ]
 
     # Update segment velocity
     G = updateSegmentVelocity( G, updated_segments )
