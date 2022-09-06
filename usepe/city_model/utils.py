@@ -157,9 +157,14 @@ def checkIfNoFlyZone( lat, lon, alt, G, segments ):
             nearest_node = ox.distance.nearest_nodes( G, X=lon, Y=lat )
         else:
             nearest_node = nearestNode3d( G, lon, lat, alt )
-        speed = segments.loc[int( G.nodes[nearest_node]['segment'] )]['speed_max']
-        cap = segments.loc[int( G.nodes[nearest_node]['segment'] )]['capacity']
-        if speed == 0:
+        if G.nodes[nearest_node]['segment'].isdigit():
+            segmentIndex = int( G.nodes[nearest_node]['segment'] )
+            speed = segments.loc[segmentIndex]['speed_max']
+            cap = segments.loc[segmentIndex]['capacity']
+            if speed == 0:
+                return True
+        else:
+            # print("Skipping node with segment '" +G.nodes[nearest_node]['segment'] + "'!")
             return True
         return False
 
