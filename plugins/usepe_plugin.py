@@ -60,7 +60,7 @@ def init_plugin():
 
         # Reset
         'reset': reset }
-    
+
     stackfunctions = {
         'USEPE': [
             'USEPE CONFIG/ON/OFF, [config_path]',
@@ -108,7 +108,7 @@ def reset():
     return
 
 
-def usepe(cmd, args=''):
+def usepe( cmd, args='' ):
     ''' USEPE command for the plugin
         Options:
         CONFIG: Set the configuration file, and initialise the various parts of the plugin.
@@ -132,32 +132,29 @@ def usepe(cmd, args=''):
 
         config_path = args
         usepeconfig = configparser.ConfigParser()
-        usepeconfig.read(config_path)
+        usepeconfig.read( config_path )
 
         graph_path = usepeconfig['BlueSky']['graph_path']
-        segment_path = usepeconfig['BlueSky']['segment_path']
         flight_plan_csv_path = usepeconfig['BlueSky']['flight_plan_csv_path']
 
-        initial_time = int(usepeconfig['BlueSky']['initial_time'])
-        final_time = int(usepeconfig['BlueSky']['final_time'])
+        initial_time = int( usepeconfig['BlueSky']['initial_time'] )
+        final_time = int( usepeconfig['BlueSky']['final_time'] )
 
-        usepegraph = UsepeGraph(graph_path)
-        usepesegments = UsepeSegments(segment_path)
-        usepestrategic = UsepeStrategicDeconfliction(initial_time, final_time)
-        usepeflightplans = UsepeFlightPlan(flight_plan_csv_path)
+        usepegraph = UsepeGraph( graph_path )
+        usepesegments = UsepeSegments()
+        usepestrategic = UsepeStrategicDeconfliction( initial_time, final_time )
+        usepeflightplans = UsepeFlightPlan( flight_plan_csv_path )
         usepedronecommands = UsepeDroneCommands()
         usepewind = UsepeWind()
-        
-        # Activate the detection and resolution method, and logger
-        configuration_path = r"{}".format( usepeconfig['BlueSky']['configuration_path'] )
-        stack.stack( 'PCALL {} REL'.format( configuration_path ) )
-        stack.stack( 'OP' )
-
 
         return True, f'The configuration file has been set.'
 
     elif cmd == 'ON':
         if usepeconfig is not None:
+            # Activate the detection and resolution method, and logger
+            configuration_path = r"{}".format( usepeconfig['BlueSky']['configuration_path'] )
+            stack.stack( 'PCALL {} REL'.format( configuration_path ) )
+            stack.stack( 'OP' )
             active = True
             return True, f'USEPE Plugin is now active'
         else:
