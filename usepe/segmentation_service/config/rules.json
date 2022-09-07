@@ -25,8 +25,8 @@
     "classes": {
         "black": { "enter": false,  "altitude": [0, 500], "velocity": [0, 0], "capacity_factor": 0.0  },
         "red": { "enter": false,  "altitude": [0, 500], "velocity": [0, 0], "capacity_factor": 0.0  },
-        "yellow": { "enter": { "rnp": 0.1 }, "altitude": [0, 500], "velocity": [10, 100], "capacity_factor": 0.5 },
-        "green": { "enter": true, "altitude": [0, 500], "velocity": [0, 10], "capacity_factor": 1.0 },
+        "yellow": { "enter": { "rnp": 0.1 }, "altitude": [50, 500], "velocity": [10, 100], "capacity_factor": 0.5 },
+        "green": { "enter": true, "altitude": [100, 500], "velocity": [0, 10], "capacity_factor": 1.0 },
         "grey": { "enter": { "rnp": 0.5, "tmz": true, "rmz": true }, "altitude": [0, 400], "velocity": [1, 10], "capacity_factor": 1.0 },
         "white": { "enter": true , "altitude": [0, 500], "velocity": [0, 100], "capacity_factor": 1.0 }
     },

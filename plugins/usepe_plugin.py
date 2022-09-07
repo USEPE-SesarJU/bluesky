@@ -36,6 +36,7 @@ usepesegments = None
 usepestrategic = None
 usepeflightplans = None
 usepedronecommands = None
+usepewind = None
 updateInterval = 1.0
 
 
@@ -51,11 +52,12 @@ def init_plugin():
     global usepeflightplans
     global usepestrategic
     global usepedronecommands
+    global usepewind
 
     # ---------------------------------- DEFINED BY USER ------------------------------------
     # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\settings_exercise_1_reference.cfg"
-    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\test\settings_OSD_3.cfg"
-    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
+    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\test\settings_OSD_3.cfg"
+    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
     # config_path = r"/home/ror/ws/scenarios/scenario/USEPE/exercise_3/settings_exe_3_ref.cfg"
     # ------------------------------------------------------------------------------------------
 
@@ -86,6 +88,7 @@ def init_plugin():
     # print( ' - Flight plan initialised - ' )
     usepedronecommands = UsepeDroneCommands()
     # print( ' - Commands initialised - ' )
+    usepewind = UsepeWind()
     # Activate the detection and resolution method, and logger
     configuration_path = r"{}".format( usepeconfig['BlueSky']['configuration_path'] )
     stack.stack( 'PCALL {} REL'.format( configuration_path ) )
@@ -1019,6 +1022,32 @@ class UsepeFlightPlan( core.Entity ):
 
     def preupdate( self ):
         self.processFlightPlans()
+        return
+
+    def reset( self ):  # Not used
+        return
+
+
+class UsepeWind( core.Entity ):
+    ''' UsepeWind new entity for BlueSky
+    This class import the wind data to BlueSky simulation
+    '''
+
+    def __init__( self ):
+        super().__init__()
+
+        # We call a pre-computed scenario with the wind information. We only consider one wind
+        # snapshot for all the simulation, so we do this once
+
+        wind_path = r"{}".format( usepeconfig['BlueSky']['wind_path'] )
+        print( "Loading wind in the simulation. File {}".format( wind_path ) )
+        stack.stack( 'PCALL {} REL'.format( wind_path ) )
+        print( "Completed" )
+
+    def update( self ):  # Not used
+        return
+
+    def preupdate( self ):  # Not used
         return
 
     def reset( self ):  # Not used
