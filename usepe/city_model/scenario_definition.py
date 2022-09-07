@@ -5,7 +5,6 @@
 """
 from io import TextIOWrapper
 from pathlib import Path
-import configparser
 import copy
 import datetime
 import json
@@ -16,11 +15,13 @@ import string
 import sys
 
 from pyproj import Transformer
+import configparser
 
 from usepe.city_model.building_height import readCity
 from usepe.city_model.multi_di_graph_3D import MultiDiGrpah3D
 from usepe.city_model.path_planning import trajectoryCalculation
 from usepe.city_model.utils import read_my_graphml, checkIfNoFlyZone, layersDict
+from usepe.segmentation_service.segmentation_service.segmentationService import rules
 import osmnx as ox
 import pandas as pd
 
@@ -1213,6 +1214,10 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
 
         area = ( zone_size / 1000 ) ** 2
 
+    # Altitudes
+    alt_min = 0
+    alt_max = rules["building_layer"]
+
     flights_second = density * area / avg_flight_duration
     time_spacing = 1 / flights_second
     total_flights = flights_second * simulation_time
@@ -1229,8 +1234,10 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
 
         orig_lat = random.uniform( lat_min, lat_max )
         orig_lon = random.uniform( lon_min, lon_max )
+        orig_alt = random.uniform( alt_min, alt_max )
         dest_lat = random.uniform( lat_min, lat_max )
         dest_lon = random.uniform( lon_min, lon_max )
+        dest_alt = random.uniform( alt_min, alt_max )
 
         if ox.distance.great_circle_vec( orig_lon, orig_lat, dest_lon, dest_lat ) < min_flight_distance:
             # We discard the trajectory if the origin and destination are too close
@@ -1240,9 +1247,9 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
             continue
 
         # Check if the origin or destination is in a restricted area (spd = 0)
-        if checkIfNoFlyZone( orig_lat, orig_lon, None, G, segments ):
+        if checkIfNoFlyZone( orig_lat, orig_lon, orig_alt, G, segments ):
             continue
-        if checkIfNoFlyZone( dest_lat, dest_lon, None, G, segments ):
+        if checkIfNoFlyZone( dest_lat, dest_lon, dest_alt, G, segments ):
             continue
 
         print( 'Creating flight {0}...'.format( n ) )
@@ -1255,13 +1262,13 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
         departure_time = '{}'.format( planned_time_s + time_submit_flight_plan )
         departure_time_seconds = planned_time_s + time_submit_flight_plan
 
-        addFlightData( orig_lat, orig_lon, 55,
-                  dest_lat, dest_lon, 55,
-                  departure_time_seconds,
-                  drone_type,
-                  'background',
-                  planned_time_s,
-                  data )
+        addFlightData( orig_lat, orig_lon, orig_alt,
+                       dest_lat, dest_lon, dest_alt,
+                       departure_time_seconds,
+                       drone_type,
+                       'background',
+                       planned_time_s,
+                       data )
 
         n += 1
     # return data
