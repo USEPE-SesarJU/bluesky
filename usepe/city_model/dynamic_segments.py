@@ -10,6 +10,7 @@ __copyright__ = '(c) Nommon 2021'
 import random
 import time
 
+import geopandas as gpd
 import networkx as nx
 import numpy as np
 import osmnx as ox
@@ -118,6 +119,7 @@ def selectNodesWithNewSegments( G, segments, deleted_segments ):
 
     """
     new_segments = list( segments.index )
+    deleted_segments = list( deleted_segments.index )
     nodes = ox.graph_to_gdfs( G, edges=False, node_geometry=False )
 
     # When a node is created for first time, the segment parameter is "new". So, the condition
@@ -127,7 +129,7 @@ def selectNodesWithNewSegments( G, segments, deleted_segments ):
     cond = cond | ( nodes['segment'].isin( new_segments ) )
     # Nodes belonging to deleted segments
     if deleted_segments is not None:
-        cond = cond | ( nodes['segment'].isin( deleted_segments ) )
+        cond = cond | ( ~nodes['segment'].isin( deleted_segments ) )
 
     df = nodes[cond]
     return df.index
@@ -202,13 +204,87 @@ def updateSegmentVelocity( G, segments ):
 
     edges = ox.utils_graph.graph_to_gdfs( G, nodes=False, fill_edge_geometry=False )
 
-    cond = edges['segment'] == 'N/A'
-
-    cond = cond | ( edges['segment'].isin( updated_segments ) )
+    cond = ( edges['segment'].isin( updated_segments ) )
 
     pd.set_option( 'mode.chained_assignment', None )
     edges['speed'][cond] = edges[cond]['segment'].apply( lambda segment_name:
-                                                         segments.loc[segment_name]['speed'] )
+                                                         segments.loc[segment_name]['speed_max'] )
+
+    cond = edges['segment'] == 'N/A'
+
+    edges['speed'][cond] = edges[cond]['segment'].apply( lambda segment_name: 0 )
+
+    nx.set_edge_attributes( G, values=edges["speed"], name="speed" )
+    return G
+
+
+def applyGeovectoringRule( df, segments, G ):
+    """
+    apply a Geovectoring rule to an edge
+
+    Args:
+        df (object): row of a dataframe
+        segments (dataframe): dataframe with the segment information
+        G (graph)
+
+    return
+        speed (float)
+    """
+
+    rule = segments[segments.index == df.segment]['geovect'].iloc[0]
+
+    O = df.name[0]
+    D = df.name[1]
+
+    lat_O = G.nodes[O]['y']
+    lat_D = G.nodes[D]['y']
+    lon_O = G.nodes[O]['x']
+    lon_D = G.nodes[D]['x']
+
+    if rule == 'N':
+        if lat_O > lat_D:
+            speed = 0
+    elif rule == 'S':
+        if lat_O < lat_D:
+            speed = 0
+    elif rule == 'E':
+        if lon_O > lon_D:
+            speed = 0
+    elif rule == 'W':
+        if lon_O < lon_D:
+            speed = 0
+    else:
+        speed = df.speed
+
+    return speed
+
+
+def updateGeovectoringRule( G, all_segments ):
+    """
+    Update the edge speed according to the new segmentation and the geovectoring rules: NSEW
+
+    Args:
+            G (graph): graph representing the city
+            segments (DataFrame): dataframe with the segment information
+    Returns:
+            G (graph): updated graph
+    """
+
+    segments = all_segments[all_segments['geovect'] != 'NSEW' ]
+    if segments.empty:
+        print( 'No geovectoring rules' )
+        return G
+    print( 'Updating segment velocity according to geovectoring rules...' )
+
+    updated_segments = list( segments.index )
+
+    edges = ox.utils_graph.graph_to_gdfs( G, nodes=False, fill_edge_geometry=False )
+
+    cond = ( edges['segment'].isin( updated_segments ) )
+
+    pd.set_option( 'mode.chained_assignment', None )
+    edges['speed'][cond] = edges[cond].apply( lambda x:
+                                              applyGeovectoringRule( x, segments, G ), axis=1 )
 
     nx.set_edge_attributes( G, values=edges["speed"], name="speed" )
     return G
@@ -250,7 +326,7 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
     Args:
             G (graph): graph representing the city
             config (configuration file): configuration file with all the relevant information
-            segments (dictionary): dictionary with all the information about segments
+            segments (dataframe): dataframe with all the information about segments
             deleted_segments (list): a list containing the segments that has been deleted
 
     Returns:
@@ -258,31 +334,39 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
             segments (dictionary): updated dictionary with all the information about segments
     """
     print( 'Updating segments...' )
-    if not segments:
-        segments = divideAirspaceSegments( config['City'].getfloat( 'hannover_lon_min' ),
-                                           config['City'].getfloat( 'hannover_lon_max' ),
-                                           config['City'].getfloat( 'hannover_lat_min' ),
-                                           config['City'].getfloat( 'hannover_lat_max' ),
-                                           0,
-                                           config['Layers'].getfloat( 'layer_width' ) *
-                                           ( config['Layers'].getfloat( 'number_of_layers' ) + 1 ),
-                                           4, 4, 2 )
+    if ( type( segments ) != pd.DataFrame ) and ( type( segments ) != gpd.GeoDataFrame ):
+        if not segments:
+            segments = divideAirspaceSegments( config['City'].getfloat( 'hannover_lon_min' ),
+                                               config['City'].getfloat( 'hannover_lon_max' ),
+                                               config['City'].getfloat( 'hannover_lat_min' ),
+                                               config['City'].getfloat( 'hannover_lat_max' ),
+                                               0,
+                                               config['Layers'].getfloat( 'layer_width' ) *
+                                               ( config['Layers'].getfloat( 'number_of_layers' ) + 1 ),
+                                               4, 4, 2 )
 
-    segments_df = pd.DataFrame.from_dict( segments, orient='index' )
-
+        segments_df = pd.DataFrame.from_dict( segments, orient='index' )
+    else:
+        segments_df = segments
     # We select only the new segments. The assignment of segments to edges is performed only in
     # these segments
     new_segments = segments_df[segments_df['new'] == True ]
+
+    deleted_segments = segments_df[segments_df['new'] != True ]
 
     # Assign segments
     G = assignSegmet2Edge( G, new_segments, deleted_segments )
 
     # We select only the updated segments. The speed update of segments is performed only in
     # these segments
-    updated_segments = segments_df[segments_df['updated'] == True ]
+    updated_segments = segments_df[( segments_df['updated'] == True ) | ( segments_df['new'] == True ) ]
 
     # Update segment velocity
     G = updateSegmentVelocity( G, updated_segments )
+
+    # Update geovectoring rules
+    if 'geovect' in segments_df:
+        G = updateGeovectoringRule( G, segments_df )
 
     # Add travel times to the graph
     G = addTravelTimes( G )
@@ -290,7 +374,7 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
     segments_df['new'] = False
     segments_df['updated'] = False
 
-    segments = segments_df.to_dict( orient='index' )
+    # segments = segments_df.to_dict( orient='index' )
     print( 'Dynamic segments completed' )
     return G, segments
 

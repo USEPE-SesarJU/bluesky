@@ -3,6 +3,7 @@
 """
 Additional functions
 """
+import copy
 import math
 import string
 
@@ -81,8 +82,7 @@ def layersDict( config ):
 
     return layers_dict
 
-
-def nearestNode3d( G, lon, lat, altitude ):
+def nearestNode3d( G, lon, lat, altitude, exclude_corridor=True ):
     '''
     This function gets the closest node of the city graph nodes with respect
     to a given reference point (lat, lon, alt)
@@ -99,7 +99,10 @@ def nearestNode3d( G, lon, lat, altitude ):
     '''
     # The nodes are filtered to exclude corridor nodes
     nodes = list( G.nodes )
-    filtered_latlon = list( filter( lambda node: str( node )[:3] != 'COR', nodes ) )
+    if exclude_corridor:
+        filtered_latlon = list( filter( lambda node: str( node )[:3] != 'COR', nodes ) )
+    else:
+        filtered_latlon = nodes
     # Iterates to get the closest one
     nearest_node = filtered_latlon[0]
     delta_xyz = ( ( G.nodes[nearest_node]['z'] - altitude ) ** 2 +
@@ -119,28 +122,51 @@ def checkIfNoFlyZone( lat, lon, alt, G, segments ):
     '''
     This function checks if the point or its nearest node is within a no-fly zone
     '''
-    # Get closed segments
-    closed_segments = {}
-    for segment_id, segment in segments.items():
-        if segment['speed'] == 0:
-            closed_segments[segment_id] = segment
-    # Check if the point is inside a no-fly zone
-    for segment_id, segment in closed_segments.items():
-        # Origin
-        if lat > segment['lat_min'] and  lat < segment['lat_max']:
-            if lon > segment['lon_min'] and  lon < segment['lon_max']:
-                print( 'Point in no fly zone: lat {0}, lon {1}'.format( lat, lon ) )
-                return True
-    # Check if the closest node of the graph is inside a no-fly zone
-    if alt == None:
-        nearest_node = ox.distance.nearest_nodes( G, X=lon, Y=lat )
+    if type( segments ) == dict:
+        # Get closed segments
+        closed_segments = {}
+        for segment_id, segment in segments.items():
+            if segment['speed'] == 0:
+                closed_segments[segment_id] = segment
+        # Check if the point is inside a no-fly zone
+        for segment_id, segment in closed_segments.items():
+            # Origin
+            if lat > segment['lat_min'] and  lat < segment['lat_max']:
+                if lon > segment['lon_min'] and  lon < segment['lon_max']:
+                    print( 'Point in no fly zone: lat {0}, lon {1}'.format( lat, lon ) )
+                    return True
+        # Check if the closest node of the graph is inside a no-fly zone
+        if alt == None:
+            nearest_node = ox.distance.nearest_nodes( G, X=lon, Y=lat )
+        else:
+            nearest_node = nearestNode3d( G, lon, lat, alt )
+        speed = segments[G.nodes[nearest_node]['segment']]['speed']
+        cap = segments[G.nodes[nearest_node]['segment']]['capacity']
+        if speed == 0:
+            return True
+        return False
     else:
-        nearest_node = nearestNode3d( G, lon, lat, alt )
-    speed = segments[G.nodes[nearest_node]['segment']]['speed']
-    cap = segments[G.nodes[nearest_node]['segment']]['capacity']
-    if speed == 0:
-        return True
-    return False
+        closed_segments = segments[segments['speed_max'] == 0]
+        for idx, row in closed_segments.iterrows():
+            if lat > row['lat_min'] and  lat < row['lat_max']:
+                if lon > row['lon_min'] and  lon < row['lon_max']:
+                    print( 'Point in no fly zone: lat {0}, lon {1}'.format( lat, lon ) )
+                    return True
+        # Check if the closest node of the graph is inside a no-fly zone
+        if alt == None:
+            nearest_node = ox.distance.nearest_nodes( G, X=lon, Y=lat )
+        else:
+            nearest_node = nearestNode3d( G, lon, lat, alt )
+        if G.nodes[nearest_node]['segment'].isdigit():
+            segmentIndex = int( G.nodes[nearest_node]['segment'] )
+            speed = segments.loc[segmentIndex]['speed_max']
+            cap = segments.loc[segmentIndex]['capacity']
+            if speed == 0:
+                return True
+        else:
+            # print("Skipping node with segment '" +G.nodes[nearest_node]['segment'] + "'!")
+            return True
+        return False
 
 def shortest_dist_to_point( x1, y1, x2, y2, x, y ):
     '''
@@ -176,6 +202,56 @@ def shortest_dist_to_point( x1, y1, x2, y2, x, y ):
     square_dist = _dx ** 2 + _dy ** 2
     return math.sqrt( square_dist )
 
+
+def wpt_bsc2wpt_graph( wpt_route_bsc, wpt_route_graph ):
+    '''
+    This function relates the name of the wpts in BlueSky with the names of the
+    waypoints in the graph for a given aircraft
+
+    wpt_route_bsc - list with waypoints names as bluesky loads them
+    wpt_route_graph - list of waypoints forming the route of the drone in the graph
+                        if it is a delivery drone, it will include two lists: go and back
+
+    wpt_bsc2graph_dict - dictionary relating the names of the waypoints in bsk (keys)
+                        with the names in the graph (values)
+    '''
+
+    if type( wpt_route_graph[0] ) is list:
+        # Delivery case
+        for route in wpt_route_graph:
+            # clean route
+            route_clean = cleanRoute( route )
+            # select corresponding route
+            if route_clean[-1] == wpt_route_bsc[-1]:
+                # create dict
+                wpt_dict = createDictWpt( wpt_route_bsc, route_clean )
+            else:
+                continue
+    else:
+        # clean route
+        route_clean = cleanRoute( wpt_route_graph )
+        # create dict
+        wpt_dict = createDictWpt( wpt_route_bsc, route_clean )
+
+    return wpt_dict
+
+def cleanRoute( wpt_route_graph ):
+    wpt_route_graph_clean = copy.deepcopy( wpt_route_graph )
+
+    for wpt_graph in wpt_route_graph[1:]:
+        idx = wpt_route_graph_clean.index( wpt_graph )
+        if wpt_route_graph_clean[idx][1:] == wpt_route_graph_clean[idx - 1][1:]:
+            del wpt_route_graph_clean[idx]
+    if len( wpt_route_graph_clean ) > 1:
+        del wpt_route_graph_clean[0]
+    return wpt_route_graph_clean
+
+def createDictWpt( wpt_route_bsc, wpt_route_graph_clean ):
+    wpt_dict = {}
+    for wpt_bsc, wpt_graph in zip( wpt_route_bsc, wpt_route_graph_clean ):
+        wpt_dict[wpt_bsc] = wpt_graph
+
+    return wpt_dict
 
 if __name__ == '__main__':
     pass

@@ -1,0 +1,1 @@
+{ "type": "Feature", "properties": { "begin": 240, "end": 800 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 9.7355, 52.366 ], [ 9.748, 52.366 ], [ 9.748, 52.374 ], [ 9.7355, 52.374 ], [ 9.7355, 52.366 ] ] ] } }

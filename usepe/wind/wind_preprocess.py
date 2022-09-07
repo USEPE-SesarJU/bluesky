@@ -3,9 +3,13 @@
 """
 A module to preprocess the wind data
 """
+from pathlib import Path
+from pickle import NONE
 import math
 import os
+
 from scipy.interpolate import griddata
+
 import netCDF4 as nc
 import numpy as np
 import time as tim
@@ -107,20 +111,25 @@ def removedMaskedValues( wind, time ):
     points_v = np.array( points_v )
     values_v = np.array( values_v )
 
-    combs_list = np.argwhere( wind['w'][time,:].data != wind['w'][:].fill_value )
+    # w component is not used
+    if 'w' in wind.VAR_LIST:
+        combs_list = np.argwhere( wind['w'][time,:].data != wind['w'][:].fill_value )
 
-    points_w = []
-    values_w = []
-    w = wind.variables['w'][:]
-    for comb in combs_list:
-        zw_iter = comb[0]
-        y_iter = comb[1]
-        x_iter = comb[2]
-        points_w.append( [zw[zw_iter], y[y_iter], x[x_iter]] )
-        values_w.append( w[time, zw_iter, y_iter, x_iter] )
+        points_w = []
+        values_w = []
+        w = wind.variables['w'][:]
+        for comb in combs_list:
+            zw_iter = comb[0]
+            y_iter = comb[1]
+            x_iter = comb[2]
+            points_w.append( [zw[zw_iter], y[y_iter], x[x_iter]] )
+            values_w.append( w[time, zw_iter, y_iter, x_iter] )
 
-    points_w = np.array( points_w )
-    values_w = np.array( values_w )
+        points_w = np.array( points_w )
+        values_w = np.array( values_w )
+    else:
+        points_w = None
+        values_w = None
 
     return points_u, values_u, points_v, values_v, points_w, values_w
 
@@ -153,7 +162,10 @@ def interpolateWind( points_u, values_u, points_v, values_v, points_w, values_w,
     print( "interpolating..." )
     grid_u = griddata( points_u, values_u, ( grid_z, grid_y, grid_x ), method='nearest' )
     grid_v = griddata( points_v, values_v, ( grid_z, grid_y, grid_x ), method='nearest' )
-    grid_w = griddata( points_w, values_w, ( grid_z, grid_y, grid_x ), method='nearest' )
+    if points_w and values_w:
+        grid_w = griddata( points_w, values_w, ( grid_z, grid_y, grid_x ), method='nearest' )
+    else:
+        grid_w = None
 
     return grid_z, grid_y, grid_x, grid_u, grid_v, grid_w
 
@@ -253,7 +265,10 @@ def createWindScenario( scenario_file, grid_lat, grid_lon, grid_z, grid_u, grid_
                 alt = grid_z[z_iter, y_iter, x_iter] * m2ft
                 u = grid_u[z_iter, y_iter, x_iter] * ms2knots
                 v = grid_v[z_iter, y_iter, x_iter] * ms2knots
-                w = grid_w[z_iter, y_iter, x_iter] * ms2knots
+                if grid_w:
+                    w = grid_w[z_iter, y_iter, x_iter] * ms2knots
+                else:
+                    w = None
 
                 direction = ( math.degrees( math.atan2( u, v ) ) + 180. )
                 wind_vector = np.array( [u, v] )
@@ -281,8 +296,8 @@ def main( path, grid_spacing_list, time ):
     points_u, values_u, points_v, values_v, points_w, values_w = removedMaskedValues( wind, time )
 
     for grid_spacing in grid_spacing_list:
-        scenario_path = r".\scenario\wind_test_{0}m_{1}s.scn"\
-            .format( grid_spacing, time )
+        scenario_path = Path( "./scenario/{2}_{0}m_{1}s.scn"\
+            .format( grid_spacing, time, path[7:-3] ) )
 
         x = list( wind['x'][:].data )
         y = list( wind['y'][:].data )
@@ -314,4 +329,7 @@ def main( path, grid_spacing_list, time ):
 
 
 if __name__ == '__main__':
-    main()
+    path = Path( "./data/USEPE_S1_3d_nest01.nc" )
+    grid_spacing_list = [5, 10, 20]
+    time = 0
+    main( path, grid_spacing_list, time )
