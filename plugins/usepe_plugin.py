@@ -1101,9 +1101,9 @@ class StateBasedUsepe( ConflictDetection ):
             drone_code = 'D'
         elif drone == 'W178':
             if gs > 12:
-                drone_code == 'F'
+                drone_code = 'F'
             else:
-                drone_code == 'M'
+                drone_code = 'M'
 
         key = '-'.join( [drone_code, manoeuvre] )
         if key in self.tables:

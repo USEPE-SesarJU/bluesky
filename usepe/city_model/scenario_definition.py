@@ -5,6 +5,7 @@
 """
 from io import TextIOWrapper
 from pathlib import Path
+import configparser
 import copy
 import datetime
 import json
@@ -15,7 +16,6 @@ import string
 import sys
 
 from pyproj import Transformer
-import configparser
 
 from usepe.city_model.building_height import readCity
 from usepe.city_model.multi_di_graph_3D import MultiDiGrpah3D
@@ -306,7 +306,8 @@ def routeParameters( G, route, ac ):
     final_node['hdg'] = None
     # final_node['speed'] = None
     final_node['dist'] = None
-
+    if not 'speed' in final_node:
+        final_node['speed'] = 5  # m/s
     route_parameters[str( len( route ) - 1 )] = final_node
 
     return route_parameters
