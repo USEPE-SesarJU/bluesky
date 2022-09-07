@@ -30,6 +30,7 @@ __author__ = 'jbueno'
 __copyright__ = '(c) Nommon 2022'
 
 
+active = False
 usepeconfig = None
 usepegraph = None
 usepesegments = None
@@ -44,55 +45,6 @@ updateInterval = 1.0
 # ## function, as it is the way BlueSky recognises this file as a plugin.
 def init_plugin():
     ''' Plugin initialisation function. '''
-    # Instantiate the UsepeLogger entity
-    global usepeconfig
-
-    global usepegraph
-    global usepesegments
-    global usepeflightplans
-    global usepestrategic
-    global usepedronecommands
-    global usepewind
-
-    # ---------------------------------- DEFINED BY USER ------------------------------------
-    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\settings_exercise_1_reference.cfg"
-    config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\test\settings_OSD_3.cfg"
-    # config_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\OSD\settings_OSD_3.cfg"
-    # config_path = r"/home/ror/ws/scenarios/scenario/USEPE/exercise_3/settings_exe_3_ref.cfg"
-    # ------------------------------------------------------------------------------------------
-
-    # graph_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\testing_graph.graphml"
-    # segment_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\offline_segments.pkl"
-    # flight_plan_csv_path = r"C:\workspace3\scenarios-USEPE\scenario\USEPE\exercise_1\data\delivery_testing.csv"
-    #
-    # initial_time = 0  # seconds
-    # final_time = 7200  # seconds
-
-    usepeconfig = configparser.ConfigParser()
-    usepeconfig.read( config_path )
-
-    graph_path = usepeconfig['BlueSky']['graph_path']
-    # segment_path = usepeconfig['BlueSky']['segment_path']
-    flight_plan_csv_path = usepeconfig['BlueSky']['flight_plan_csv_path']
-
-    initial_time = int( usepeconfig['BlueSky']['initial_time'] )
-    final_time = int( usepeconfig['BlueSky']['final_time'] )
-
-    usepegraph = UsepeGraph( graph_path )
-    # print( ' - Graph initialised - ' )
-    usepesegments = UsepeSegments()
-    # print( ' - Segments initialised - ' )
-    usepestrategic = UsepeStrategicDeconfliction( initial_time, final_time )
-    # print( ' - Strategic deconfliction initialised - ' )
-    usepeflightplans = UsepeFlightPlan( flight_plan_csv_path )
-    # print( ' - Flight plan initialised - ' )
-    usepedronecommands = UsepeDroneCommands()
-    # print( ' - Commands initialised - ' )
-    usepewind = UsepeWind()
-    # Activate the detection and resolution method, and logger
-    configuration_path = r"{}".format( usepeconfig['BlueSky']['configuration_path'] )
-    stack.stack( 'PCALL {} REL'.format( configuration_path ) )
-    stack.stack( 'OP' )
 
     # Configuration parameters
     config = {
@@ -108,79 +60,115 @@ def init_plugin():
 
         # Reset
         'reset': reset }
+    
+    stackfunctions = {
+        'USEPE': [
+            'USEPE CONFIG/ON/OFF, [config_path]',
+            'txt, [txt]',
+            usepe,
+            'Set path to configuration file, or turn on/off the plugin.'
+        ]
+    }
 
     # init_plugin() should always return a configuration dict.
-    return config
+    return config, stackfunctions
 
 
 def update():
-    if sim.simt > usepeconfig.getint( 'BlueSky', 'final_time' ):
-        stack.stack( 'RESET' )
-        stack.stack( 'QUIT' )
+    if active:
+        if sim.simt > usepeconfig.getint( 'BlueSky', 'final_time' ):
+            stack.stack( 'RESET' )
+            stack.stack( 'QUIT' )
 
-    start = time.time()
-    usepegraph.update()
-    # print( ' - Graph updated - ' )
-    end_graph = time.time()
-    usepesegments.update()
-    # print( ' - Segments updated - ' )
-    end_segm = time.time()
-    usepestrategic.update()
-    # print( ' - Strategic deconfliction updated - ' )
-    end_strat = time.time()
-    usepeflightplans.update()
-    # print( ' - Flight plan updated - ' )
-    end_flight = time.time()
-    usepedronecommands.update()
-    # print( ' - Commands updated - ' )
-    end_commands = time.time()
-    #===============================================================================================
-    # print( 'The elapsed time UPDATE is:\n - graph update: {}\n - segmentation update: {}\n\
-    #      - strategic update: {}\n - flight plan update: {}\n - commands update: {}'.format( end_graph - start,
-    #                                                                                        end_segm - start,
-    #                                                                                        end_strat - start,
-    #                                                                                        end_flight - start,
-    #                                                                                        end_commands - start ) )
-    #===============================================================================================
+        usepegraph.update()
+        usepesegments.update()
+        usepestrategic.update()
+        usepeflightplans.update()
+        usepedronecommands.update()
     return
 
 
 def preupdate():
-    start = time.time()
-    usepegraph.preupdate()
-    # print( ' - Graph pre-updated - ' )
-    end_graph = time.time()
-    usepesegments.preupdate()
-    # print( ' - Segments pre-updated - ' )
-    end_segm = time.time()
-    usepestrategic.preupdate()
-    # print( ' - Strategic deconfliction pre-updated - ' )
-    end_strat = time.time()
-    usepeflightplans.preupdate()
-    # print( ' - Flight plan pre-updated - ' )
-    end_flight = time.time()
-    usepedronecommands.preupdate()
-    # print( ' - Commands pre-updated - ' )
-    end_commands = time.time()
-    #===============================================================================================
-    # print( 'The elapsed time PREUPDATE is:\n - graph preupdate: {}\n - segmentation preupdate: {}\n\
-    #      - strategic preupdate: {}\n - flight plan preupdate: {}\n - commands preupdate: {}'.format( end_graph - start,
-    #                                                                                                 end_segm - start,
-    #                                                                                                 end_strat - start,
-    #                                                                                                 end_flight - start,
-    #                                                                                                 end_commands - start ) )
-    #===============================================================================================
-
+    if active:
+        usepegraph.preupdate()
+        usepesegments.preupdate()
+        usepestrategic.preupdate()
+        usepeflightplans.preupdate()
+        usepedronecommands.preupdate()
     return
 
 
 def reset():
-    usepegraph.reset()
-    usepesegments.reset()
-    usepestrategic.reset()
-    usepeflightplans.reset()
-    usepedronecommands.reset()
+    if active:
+        usepegraph.reset()
+        usepesegments.reset()
+        usepestrategic.reset()
+        usepeflightplans.reset()
+        usepedronecommands.reset()
     return
+
+
+def usepe(cmd, args=''):
+    ''' USEPE command for the plugin
+        Options:
+        CONFIG: Set the configuration file, and initialise the various parts of the plugin.
+        ON: Activate the plugin.
+        OFF: Deactivate the plugin.
+    '''
+
+    global active
+    global usepeconfig
+
+    global usepegraph
+    global usepesegments
+    global usepeflightplans
+    global usepestrategic
+    global usepedronecommands
+    global usepewind
+
+    if cmd == 'CONFIG':
+        if args == '':
+            return False, f'"USEPE CONFIG" needs a valid path to configuration file.'
+
+        config_path = args
+        usepeconfig = configparser.ConfigParser()
+        usepeconfig.read(config_path)
+
+        graph_path = usepeconfig['BlueSky']['graph_path']
+        segment_path = usepeconfig['BlueSky']['segment_path']
+        flight_plan_csv_path = usepeconfig['BlueSky']['flight_plan_csv_path']
+
+        initial_time = int(usepeconfig['BlueSky']['initial_time'])
+        final_time = int(usepeconfig['BlueSky']['final_time'])
+
+        usepegraph = UsepeGraph(graph_path)
+        usepesegments = UsepeSegments(segment_path)
+        usepestrategic = UsepeStrategicDeconfliction(initial_time, final_time)
+        usepeflightplans = UsepeFlightPlan(flight_plan_csv_path)
+        usepedronecommands = UsepeDroneCommands()
+        usepewind = UsepeWind()
+        
+        # Activate the detection and resolution method, and logger
+        configuration_path = r"{}".format( usepeconfig['BlueSky']['configuration_path'] )
+        stack.stack( 'PCALL {} REL'.format( configuration_path ) )
+        stack.stack( 'OP' )
+
+
+        return True, f'The configuration file has been set.'
+
+    elif cmd == 'ON':
+        if usepeconfig is not None:
+            active = True
+            return True, f'USEPE Plugin is now active'
+        else:
+            return False, f'The configuration file is not provided. First use "USEPE CONFIG config_path"'
+
+    elif cmd == 'OFF':
+        active = False
+        return True, f'USEPE Plugin is now inactive'
+
+    else:
+        return False, f'Available commands are: CONFIG, ON, OFF'
 
 
 class UsepeGraph( core.Entity ):
