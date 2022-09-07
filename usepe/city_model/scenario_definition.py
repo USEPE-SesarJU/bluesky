@@ -21,7 +21,7 @@ from usepe.city_model.building_height import readCity
 from usepe.city_model.multi_di_graph_3D import MultiDiGrpah3D
 from usepe.city_model.path_planning import trajectoryCalculation
 from usepe.city_model.utils import read_my_graphml, checkIfNoFlyZone, layersDict
-from usepe.segmentation_service.segmentation_service.segmentationService import rules
+from usepe.segmentation_service.python.utils import misc
 import osmnx as ox
 import pandas as pd
 
@@ -1216,6 +1216,7 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
 
     # Altitudes
     alt_min = 0
+    rules = misc.load_rules()
     alt_max = rules["building_layer"]
 
     flights_second = density * area / avg_flight_duration
