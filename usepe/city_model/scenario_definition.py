@@ -1467,7 +1467,7 @@ def planSurveillanceDrone( orig, dest, departure_time, drone_model, operation_id
     ( dest_lat, dest_lon, dest_alt ) = dest
 
     # Flight plan must be submitted 10 min before departure
-    submit_flight_plan = 10 * 60
+    submit_flight_plan = 15 * 60
 
     addFlightData( orig_lat, orig_lon, orig_alt,
                   dest_lat, dest_lon, dest_alt,
