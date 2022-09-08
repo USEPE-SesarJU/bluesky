@@ -64,7 +64,7 @@ def init_plugin():
     stackfunctions = {
         'USEPE': [
             'USEPE CONFIG/ON/OFF, [config_path]',
-            'txt, [txt]',
+            'txt, [word]',
             usepe,
             'Set path to configuration file, or turn on/off the plugin.'
         ]
