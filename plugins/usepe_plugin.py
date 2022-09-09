@@ -316,7 +316,7 @@ class UsepeSegments( core.Entity ):
             '''Update rules'''
 
             # WIND #
-            wind_file = usepeconfig['Segmentation service']['wind_path']
+            wind_file = usepeconfig['Segmentation_service']['wind_path']
             if wind_file:
                 if not self.strategic_wind_updated:
                     self.segmentation_service.update_wind_strat( wind_file, False )  # strategic update rules based on wind data
@@ -1027,7 +1027,7 @@ class UsepeWind( core.Entity ):
         # We call a pre-computed scenario with the wind information. We only consider one wind
         # snapshot for all the simulation, so we do this once
 
-        wind_path = r"{}".format( usepeconfig['BlueSky']['wind_path'] )
+        wind_path = r"{}".format( usepeconfig['BlueSky']['wind_scenario_path'] )
         if wind_path:
             print( "Loading wind in the simulation. File {}".format( wind_path ) )
             stack.stack( 'PCALL {} REL'.format( wind_path ) )
