@@ -152,8 +152,8 @@ def usepe( cmd, args='' ):
     elif cmd == 'ON':
         if usepeconfig is not None:
             # Activate the detection and resolution method, and logger
-            configuration_path = r"{}".format( usepeconfig['BlueSky']['configuration_path'] )
-            stack.stack( 'PCALL {} REL'.format( configuration_path ) )
+            # configuration_path = r"{}".format( usepeconfig['BlueSky']['configuration_path'] )
+            # stack.stack( 'PCALL {} REL'.format( configuration_path ) )
             stack.stack( 'OP' )
             active = True
             return True, f'USEPE Plugin is now active'
@@ -326,7 +326,7 @@ class UsepeSegments( core.Entity ):
                                                         None,
                                                         traf.id,
                                                         usepegraph.graph )  # tactical update rules
-            #else:
+            # else:
             #    print("No wind path specified, skipping all wind simulation!")
 
             # TRAFFIC #
@@ -1033,7 +1033,7 @@ class UsepeWind( core.Entity ):
             stack.stack( 'PCALL {} REL'.format( wind_path ) )
             print( "Completed" )
         else:
-            print("No path to wind files specified, skipping all wind simulation!")
+            print( "No path to wind files specified, skipping all wind simulation!" )
 
     def update( self ):  # Not used
         return
