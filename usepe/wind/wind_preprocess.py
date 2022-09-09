@@ -297,7 +297,7 @@ def main( path, grid_spacing_list, time ):
 
     for grid_spacing in grid_spacing_list:
         scenario_path = Path( "./scenario/{2}_{0}m_{1}s.scn"\
-            .format( grid_spacing, time, path[7:-3] ) )
+            .format( grid_spacing, time, path.stem ) )
 
         x = list( wind['x'][:].data )
         y = list( wind['y'][:].data )
