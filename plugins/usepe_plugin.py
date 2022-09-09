@@ -317,16 +317,19 @@ class UsepeSegments( core.Entity ):
 
             # WIND #
             wind_file = usepeconfig['Segmentation service']['wind_path']
-            if not self.strategic_wind_updated:
-                self.segmentation_service.update_wind_strat( wind_file, False )  # strategic update rules based on wind data
-                self.strategic_wind_updated = True
-            self.segmentation_service.update_wind_tact( usepeflightplans.route_dict,
+            if wind_file:
+                if not self.strategic_wind_updated:
+                    self.segmentation_service.update_wind_strat( wind_file, False )  # strategic update rules based on wind data
+                    self.strategic_wind_updated = True
+                self.segmentation_service.update_wind_tact( usepeflightplans.route_dict,
                                                         self.recentpath,
                                                         None,
                                                         traf.id,
                                                         usepegraph.graph )  # tactical update rules
+            #else:
+            #    print("No wind path specified, skipping all wind simulation!")
 
-            # TRAFIC #
+            # TRAFFIC #
 
             self.segmentation_service.update_traffic_strat( self.recentpath )
             self.segmentation_service.update_traffic_tact( self.recentpath )
@@ -1025,9 +1028,12 @@ class UsepeWind( core.Entity ):
         # snapshot for all the simulation, so we do this once
 
         wind_path = r"{}".format( usepeconfig['BlueSky']['wind_path'] )
-        print( "Loading wind in the simulation. File {}".format( wind_path ) )
-        stack.stack( 'PCALL {} REL'.format( wind_path ) )
-        print( "Completed" )
+        if wind_path:
+            print( "Loading wind in the simulation. File {}".format( wind_path ) )
+            stack.stack( 'PCALL {} REL'.format( wind_path ) )
+            print( "Completed" )
+        else:
+            print("No path to wind files specified, skipping all wind simulation!")
 
     def update( self ):  # Not used
         return
