@@ -1218,7 +1218,7 @@ class StateBasedUsepe( ConflictDetection ):
                         in_ = intruder.id[j]
 
                         # Calculate relative position
-                        qdr_iter = qdr[i][j]
+                        qdr_iter = qdr[i][j] - ownship.trk[i]
                         qdrrad_iter = np.radians( qdr_iter )
                         dx_iter = dist[i][j] * np.sin( qdrrad_iter )  # is pos j rel to i
                         dy_iter = dist[i][j] * np.cos( qdrrad_iter )  # is pos j rel to i
@@ -1233,23 +1233,34 @@ class StateBasedUsepe( ConflictDetection ):
 
                         int_gs_iter_table = min( self.table_gs_list, key=lambda x:abs( x - int_gs_iter ) )
 
-                        dx_grid = [math.floor( dx_iter / self.table_grid ), math.floor( dx_iter / self.table_grid ),
-                                   math.ceil( dx_iter / self.table_grid ), math.ceil( dx_iter / self.table_grid )]
+                        dx_grid = [math.floor( dx_iter / self.table_grid ) * self.table_grid, math.floor( dx_iter / self.table_grid ) * self.table_grid,
+                                   math.ceil( dx_iter / self.table_grid ) * self.table_grid, math.ceil( dx_iter / self.table_grid ) * self.table_grid]
 
-                        dy_grid = [math.floor( dy_iter / self.table_grid ), math.ceil( dy_iter / self.table_grid ),
-                                   math.floor( dy_iter / self.table_grid ), math.ceil( dy_iter / self.table_grid )]
+                        dy_grid = [math.floor( dy_iter / self.table_grid ) * self.table_grid, math.ceil( dy_iter / self.table_grid ) * self.table_grid,
+                                   math.floor( dy_iter / self.table_grid ) * self.table_grid, math.ceil( dy_iter / self.table_grid ) * self.table_grid]
 
                         time_to_react_all_list = []
+
+                        # intruder relative course
+                        ow_course = ownship.aporasas.trk[i]
+                        in_course = intruder.aporasas.trk[j]
+
+                        relative_course = round( ( in_course - 180 ) - ow_course )
+                        if relative_course >= 360:
+                            relative_course -= 360
+                        elif relative_course < 0:
+                            relative_course += 360
+
                         for manoeuvre in ['H', 'S', 'V']:
                             # select table
                             table = self.selectTable( ownship.type[i], manoeuvre, own_gs_iter_table )
                             time_to_react_list = []
 
                             for x, y in zip( dx_grid, dy_grid ):
-                                if manoeuvre == 'S' and x == 0 and qdr_iter == 0:  # check this condition
+                                if manoeuvre == 'S' and x == 0 and relative_course == 0:  # check this condition
                                     time_to_react_list.extend( [0] )
                                 else:
-                                    time_to_react_list.extend( self.checkTable( table, x, y, qdr_iter, own_gs_iter_table, int_gs_iter_table ) )
+                                    time_to_react_list.extend( self.checkTable( table, x, y, relative_course, own_gs_iter_table, int_gs_iter_table ) )
 
                             if time_to_react_list:
                                 time_to_react_all_list.extend( [min( time_to_react_list )] )
