@@ -457,6 +457,8 @@ class UsepeSegments( core.Entity ):
 
                 acrte = traf.ap.route[idx]
                 iactwp = acrte.iactwp
+                if iactwp >= ( len( acrte.wpname ) - 3 ):
+                    continue
                 lat0 = acrte.wplat[iactwp]
                 lon0 = acrte.wplon[iactwp]
                 alt0 = acrte.wpalt[iactwp]
