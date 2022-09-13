@@ -75,6 +75,8 @@ def init_plugin():
 
 
 def update():
+    if sim.simt % 600 == 0:
+        print( 'Simulation time: {}'.format( sim.simt ) )
     if active:
         if sim.simt > usepeconfig.getint( 'BlueSky', 'final_time' ):
             stack.stack( 'RESET' )
@@ -1116,8 +1118,8 @@ class StateBasedUsepe( ConflictDetection ):
         # Horizontal conflict ------------------------------------------------------
 
         # qdrlst is for [i,j] qdr from i to j, from perception of ADSB and own coordinates
-        qdr, dist = geo.kwikqdrdist_matrix( np.asmatrix( ownship.lat ), np.asmatrix( ownship.lon ),
-                                    np.asmatrix( intruder.lat ), np.asmatrix( intruder.lon ) )
+        qdr, dist = geo.kwikqdrdist_matrix( ownship.lat.view( np.matrix ), ownship.lon.view( np.matrix ),
+                                    intruder.lat.view( np.matrix ), intruder.lon.view( np.matrix ) )
 
         # Convert back to array to allow element-wise array multiplications later on
         # Convert to meters and add large value to own/own pairs
@@ -1153,7 +1155,7 @@ class StateBasedUsepe( ConflictDetection ):
 
         # Check for horizontal conflict
         # RPZ can differ per aircraft, get the largest value per aircraft pair
-        rpz = np.asarray( np.maximum( np.asmatrix( rpz ), np.asmatrix( rpz ).transpose() ) )
+        rpz = np.asarray( np.maximum( rpz.view( np.matrix ), rpz.view( np.matrix ).transpose() ) )
         R2 = rpz * rpz
         swhorconf = dcpa2 < R2  # conflict or not
 
@@ -1176,7 +1178,7 @@ class StateBasedUsepe( ConflictDetection ):
 
         # Check for passing through each others zone
         # hPZ can differ per aircraft, get the largest value per aircraft pair
-        hpz = np.asarray( np.maximum( np.asmatrix( hpz ), np.asmatrix( hpz ).transpose() ) )
+        hpz = np.asarray( np.maximum( hpz.view( np.matrix ), hpz.view( np.matrix ).transpose() ) )
         tcrosshi = ( dalt + hpz ) / -dvs
         tcrosslo = ( dalt - hpz ) / -dvs
         tinver = np.minimum( tcrosshi, tcrosslo )
@@ -1187,7 +1189,7 @@ class StateBasedUsepe( ConflictDetection ):
         toutconf = np.minimum( toutver, touthor )
 
         swconfl = np.array( swhorconf * ( tinconf <= toutconf ) * ( toutconf > 0.0 ) *
-                           np.asarray( tinconf < np.asmatrix( dtlookahead ).T ) * ( 1.0 - I ), dtype=bool )
+                           np.asarray( tinconf < dtlookahead.view( np.matrix ).T ) * ( 1.0 - I ), dtype=bool )
 
         # --------------------------------------------------------------------------
         # Update conflict lists
