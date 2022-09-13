@@ -208,7 +208,7 @@ class UsepeSegments( core.Entity ):
 
         # Initialise class of dynamic segmentation - it provides the initial segments
         # Include the region for input
-        self.region = "Hannover"
+        self.region = "Region Hannover"
 
         self.segmentation_service = segmentationService( self.region )
         self.segmentation_service.export_cells()  # export .json file to "./data/examples"
