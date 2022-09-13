@@ -34,7 +34,7 @@
         "aerodrome": {
             "buffer": 1500,
             "osm": { "aeroway": ["aerodrome", "heliport"] },
-            "class": "red"
+            "class": "white"
         },
         "hospital": {
             "buffer": 100,
