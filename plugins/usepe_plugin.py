@@ -852,7 +852,7 @@ class UsepeDroneCommands( core.Entity ):
                                       scenario_file, scenario_path, hovering_time=30 )
         elif ac['purpose'] == 'surveillance':
             premade_scenario_path = Path( 'USEPE', 'exercise_3', 'surveillance_' + ac['op_id'] + '.scn' )
-            createSurveillanceFlightPlan( route[0], route[1], ac, departure_time, G, layers_dict,
+            createSurveillanceFlightPlan( route, ac, departure_time, G, layers_dict,
                 scenario_file, scenario_path, premade_scenario_path )
         else:
             createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
