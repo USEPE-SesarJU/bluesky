@@ -465,6 +465,18 @@ class UsepeSegments( core.Entity ):
 
             # If a new drone is created: update dict
             if acid not in self.wpt_dict:
+
+                if not usepeflightplans.route_dict[acid]:
+                    i = traf.id2idx( acid )
+                    acrte = traf.ap.route[i]
+                    route = acrte.wpname
+                    for j in range( len( route ) ):
+                        lat = acrte.wplat[j]
+                        lon = acrte.wplon[j]
+                        alt = acrte.wpalt[j]
+                        name = route[j]
+                        usepegraph.graph.add_node( name, y=lat, x=lon, z=alt, segment='priority' )
+                    usepeflightplans.route_dict[acid] = route
                 # Add entry in the dict
                 wpt_route_graph = usepeflightplans.route_dict[acid]
                 wpt_dict_acid = wpt_bsc2wpt_graph( acrte.wpname, wpt_route_graph )
@@ -509,6 +521,8 @@ class UsepeSegments( core.Entity ):
                 # 3rd. To update the drones that are already flying
                 for acid in traf.id:
                     print( acid )
+                    if 'SURVEILLANCE' in acid:
+                        continue
                     idx = traf.id2idx( acid )
 
                     acrte = traf.ap.route[idx]
@@ -687,7 +701,7 @@ class UsepeStrategicDeconfliction( core.Entity ):
                                             departure_time, usepegraph.graph, self.users,
                                             self.initial_time, self.final_time,
                                             copy.deepcopy( usepesegments.segments ), usepeconfig,
-                                            ac, only_rerouting=False, wait_time=row['operation_duration'] )
+                                            ac, only_rerouting=False )
         else:
             users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
                                                                    usepegraph.graph, self.users,
