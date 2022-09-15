@@ -224,18 +224,18 @@ def update_wind( cells, windData, interp_UTM=False ):
     # -> maximal error approx 5 meters
 
     # assumes interpolated wind data to equidistant grid
-    windData.load()
+    # windData.load()
     # remove time axix
     windData["u"] = windData["u"][0, ...]
     windData["v"] = windData["v"][0, ...]
     # windData["w"] = windData["w"][0, ...]
 
-    nLat = len( windData["lat"][0,:] )
-    nLon = len( windData["lon"][:, 0] )
-    nAlt = len( windData["zu_3d"] )
+    nLat = windData["lat"].sizes["y"]
+    nLon = windData["lon"].sizes["x"]
+    nAlt = windData["zu_3d"].sizes["zu_3d"]
 
-    midLat = math.ceil( len( windData["lat"][0,:] ) / 2 )
-    midLon = math.ceil( len( windData["lon"][:, 0] ) / 2 )
+    midLat = math.ceil( nLat / 2 )
+    midLon = math.ceil( nLon / 2 )
 
     # # calculate scalar wind speed from staggered wind velocities
     # # scalar values in grid center -> interpolate into the grid center
@@ -261,8 +261,8 @@ def update_wind( cells, windData, interp_UTM=False ):
                 ( grid_lat, grid_lon ),
             )
     else:
-        windLat = windData["lat"][:, midLat].to_numpy()
-        windLon = windData["lon"][midLon,:].to_numpy()
+        windLat = windData["lat"][:,midLon].to_numpy()
+        windLon = windData["lon"][midLat,:].to_numpy()
 
     # # zu_3d and zw_3d are both relative to the height level of origin_z. origin_z is the altitude above sea level.
     # windAlt = (windData["zu_3d"] + windData.origin_z).to_numpy()  # 0 m at sea level
@@ -335,18 +335,18 @@ def process_wind_data( wind_file, interp_UTM=False ):
 
     # assumes interpolated wind data to equidistant grid
     windData = xr.open_dataset( ( wind_file + ".nc" ) )
-    windData.load()
+    # windData.load()
     # remove time axix
     windData["u"] = windData["u"][0, ...]
     windData["v"] = windData["v"][0, ...]
     # windData["w"] = windData["w"][0, ...]
 
-    nLat = len( windData["lat"][0,:] )
-    nLon = len( windData["lon"][:, 0] )
-    nAlt = len( windData["zu_3d"] )
+    nLat = windData["lat"].sizes["y"]
+    nLon = windData["lon"].sizes["x"]
+    nAlt = windData["zu_3d"].sizes["zu_3d"]
 
-    midLat = math.ceil( len( windData["lat"][0,:] ) / 2 )
-    midLon = math.ceil( len( windData["lon"][:, 0] ) / 2 )
+    midLat = math.ceil( nLat / 2 )
+    midLon = math.ceil( nLon / 2 )
 
     # # calculate scalar wind speed from staggered wind velocities
     # # scalar values in grid center -> interpolate into the grid center
@@ -357,6 +357,10 @@ def process_wind_data( wind_file, interp_UTM=False ):
         )
         # +np.power( windData["w"].interp( x=windData.coords["xu"], y=windData.coords["yv"] ), 2 )
     )
+
+    windData["u"] = windData["u"][0,0,0]
+    windData["v"] = windData["v"][0,0,0]
+    # windData["w"] = windData["w"][0,0,0]
 
     if interp_UTM:
         windLat = np.linspace( windData["lat"].min(), windData["lat"].max(), nLat )
@@ -381,8 +385,8 @@ def process_wind_data( wind_file, interp_UTM=False ):
         #     dims=["alt_proc", "lat_proc", "lon_proc"],
         # )
     else:
-        windLat = windData["lat"][:, midLat].to_numpy()
-        windLon = windData["lon"][midLon,:].to_numpy()
+        windLat = windData["lat"][:,midLon].to_numpy()
+        windLon = windData["lon"][midLat,:].to_numpy()
 
     # # zu_3d and zw_3d are both relative to the height level of origin_z. origin_z is the altitude above sea level.
     # windAlt = (windData["zu_3d"] + windData.origin_z).to_numpy()  # 0 m at sea level
