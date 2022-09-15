@@ -87,7 +87,7 @@ class segmentationService:
             region = ox.geocode_to_gdf( region )
         if isinstance( region, gpd.GeoDataFrame ):
             region = region.geometry[0]
-            region = region.buffer( 2 * _SHAPELY_TOLERANCE )  # increases size of all polygons
+            region = region.buffer( 4 * _SHAPELY_TOLERANCE )  # increases size of all polygons
             region = region.simplify( _SHAPELY_TOLERANCE, preserve_topology=False )
         self.region, _ = polygons.orthogonal_bounds( region, self.rules["min_grid"] )
         return
