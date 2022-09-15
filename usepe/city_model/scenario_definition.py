@@ -951,10 +951,10 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
             departure_time, ac['id'], state['ref_wpt'], ac['id'], layers_dict[route1[-1][0]] * m2ft,
             ac['id'] )
         new_line1 = '{0} > {1} AT {2} DO {3} ATALT {6}, DELAY {4} DEL {5}'.format( 
-            departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time ), ac['id'],
+            departure_time, ac['id'], state['ref_wpt'], ac['id'], str( hovering_time ), ac['id'],
             layers_dict[route1[-1][0]] * m2ft )
         new_line2 = '{0} > {1} AT {2} DO {3} ATALT {6}, DELAY {4} PCALL {5} REL'.format( 
-            departure_time, ac['id'], route1[-1], ac['id'], str( hovering_time + 3 ), return_path,
+            departure_time, ac['id'], state['ref_wpt'], ac['id'], str( hovering_time + 3 ), return_path,
             layers_dict[route1[-1][0]] * m2ft )
 
         scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' )

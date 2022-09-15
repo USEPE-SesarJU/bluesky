@@ -157,8 +157,15 @@ def assignSegmet2Edge( G, segments_df, deleted_segments ):
     # We select the nodes belonging to the new segments
     nodes_affected = selectNodesWithNewSegments( G, segments_df, deleted_segments )
     for node in nodes_affected:
-        if node[0:2] == 'COR':
+        if node[0:3] == 'COR':
             # corridors do not depend on this segmentation
+            segment_name = node.split( '_' )[0]
+            G.nodes[node]['segment'] = segment_name
+            connected_edges = list( G.neighbors( node ) )
+            for edge in connected_edges:
+                # If the origin node of an edge belongs to the segment, then the edge belongs to the
+                # segment.
+                G.edges[node, edge, 0 ]['segment'] = segment_name
             continue
 
         node_lon = G.nodes[node]['x']
@@ -352,14 +359,15 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
     # these segments
     new_segments = segments_df[segments_df['new'] == True ]
 
-    deleted_segments = segments_df[segments_df['new'] != True ]
+    not_new_segments = segments_df[segments_df['new'] != True ]
 
     # Assign segments
-    G = assignSegmet2Edge( G, new_segments, deleted_segments )
+    G = assignSegmet2Edge( G, new_segments, not_new_segments )
 
     # We select only the updated segments. The speed update of segments is performed only in
     # these segments
-    updated_segments = segments_df[( segments_df['updated'] == True ) | ( segments_df['new'] == True ) ]
+    updated_segments = segments_df[( segments_df['updated'] == True ) | ( segments_df['new'] == True ) | ( 
+        segments_df.index.astype( str ).str.contains( 'COR' ) ) ]
 
     # Update segment velocity
     G = updateSegmentVelocity( G, updated_segments )

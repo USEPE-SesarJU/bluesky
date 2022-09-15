@@ -217,6 +217,11 @@ class UsepeSegments( core.Entity ):
 
         self.segments = pd.read_json( 'usepe/segmentation_service/data/examples/' + self.region + '.json', orient="records", lines=True )
 
+        if not usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
+            self.referenceSegments()
+        else:
+            self.addCorridorSegments()
+
         usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )
 
         self.wpt_dict = {}
@@ -230,6 +235,48 @@ class UsepeSegments( core.Entity ):
             self.recentpath = np.array( [], dtype=np.ndarray )
 
         self.printRedSegments()
+
+    def referenceSegments( self ):
+        ref_speed = 20
+        ref_capacity = 999
+        reference_segments = self.segments.copy()
+        reference_segments['class'] = reference_segments['class'].apply( lambda x: x if x == 'black' else 'white' )
+        reference_segments['speed_max'] = reference_segments['class'].apply( lambda x: 0 if x == 'black' else ref_speed )
+        reference_segments['capacity'] = reference_segments['class'].apply( lambda x: 0 if x == 'black' else ref_capacity )
+
+        self.segments = reference_segments
+
+    def addCorridorSegments( self ):
+        # active_corridors = [1, 2, 3, 4]
+        active_corridors = usepeconfig['Corridors']['corridors'].split( ' ' )
+
+        for cor in active_corridors:
+            name1 = 'COR{}'.format( str( cor ) )
+            name2 = 'COR{}r'.format( str( cor ) )
+
+            class_ = 'COR'
+            lat_min = 0
+            lat_max = 0
+            lon_min = 0
+            lon_max = 0
+            z_min = 0
+            z_max = 0
+            speed_min = 0
+            speed_max = int( usepeconfig['Corridors']['speed'] )
+            capacity = 99
+            occupancy = 0
+            geovect = 'NSEW'
+            parent = None
+            new = False
+            updated = False
+
+            if name1 not in self.segments.index:
+                self.segments.loc[name1] = [class_, lat_min, lat_max, lon_min, lon_max, z_min, z_max, speed_min,
+                                            speed_max, capacity, occupancy, geovect, parent, new, updated]
+            if name2 not in self.segments.index:
+                self.segments.loc[name2] = [class_, lat_min, lat_max, lon_min, lon_max, z_min, z_max, speed_min,
+                                            speed_max, capacity, occupancy, geovect, parent, new, updated]
+
 
     def create( self, n=1 ):
         super().create( n )
@@ -343,6 +390,8 @@ class UsepeSegments( core.Entity ):
             updated = True
             self.segmentation_service.export_cells()  # export .json file to "./data/examples"
             self.segments = pd.read_json( 'usepe/segmentation_service/data/examples/' + self.region + '.json', orient="records", lines=True )
+
+            self.addCorridorSegments()
             print( 'Segments update completed.' )
 
         # The event rule is continuous
@@ -352,6 +401,8 @@ class UsepeSegments( core.Entity ):
             self.segmentation_service.event_update = False
             self.segmentation_service.export_cells()  # export .json file to "./data/examples"
             self.segments = pd.read_json( 'usepe/segmentation_service/data/examples/' + self.region + '.json', orient="records", lines=True )
+
+            self.addCorridorSegments()
 
         segments = self.segments
 
