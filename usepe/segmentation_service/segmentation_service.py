@@ -398,8 +398,10 @@ class segmentationService:
                                     ( log_pos[ii][jj][3] > self.cells.iloc[cod[ind]]["z_min"] )
                                     and ( log_pos[ii][jj][3] < self.cells.iloc[cod[ind]]["z_max"] )
                                 )
-                            ][0]
-                            cods.append( cod )
+                            ]
+                            if cod:
+                                cod = cod[0]
+                                cods.append( cod )
 
         cods = list( set( cods ) )  # get unique
         for ii in cods:
