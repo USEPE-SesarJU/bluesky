@@ -491,87 +491,90 @@ class UsepeSegments( core.Entity ):
 
         if updated:
             # TODO: Perform all the activities associated to the segmetns update
+            df = self.segments[( self.segments['updated'] == True ) | ( self.segments['new'] == True )]
+            if df.empty:
+                pass
+            else:
+                # Print red segments
+                self.printRedSegments()
 
-            # Print red segments
-            self.printRedSegments()
+                # 1st:  to update the graph
+                usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )
 
-            # 1st:  to update the graph
-            usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )
+                # 2nd: to initialised the population of segments
+                usepestrategic.initialisedUsers()
 
-            # 2nd: to initialised the population of segments
-            usepestrategic.initialisedUsers()
+                # segments_df = pd.DataFrame.from_dict( self.segments, orient='index' )
+                segments_df = self.segments
+                # 3rd. To update the drones that are already flying
+                for acid in traf.id:
+                    print( acid )
+                    idx = traf.id2idx( acid )
 
-            # segments_df = pd.DataFrame.from_dict( self.segments, orient='index' )
-            segments_df = self.segments
-            # 3rd. To update the drones that are already flying
-            for acid in traf.id:
-                print( acid )
-                idx = traf.id2idx( acid )
+                    acrte = traf.ap.route[idx]
+                    iactwp = acrte.iactwp
+                    if iactwp >= ( len( acrte.wpname ) - 3 ):
+                        continue
+                    lat0 = acrte.wplat[iactwp]
+                    lon0 = acrte.wplon[iactwp]
+                    alt0 = acrte.wpalt[iactwp]
 
-                acrte = traf.ap.route[idx]
-                iactwp = acrte.iactwp
-                if iactwp >= ( len( acrte.wpname ) - 3 ):
-                    continue
-                lat0 = acrte.wplat[iactwp]
-                lon0 = acrte.wplon[iactwp]
-                alt0 = acrte.wpalt[iactwp]
+                    if alt0 < 0:
+                        alt0 = traf.alt[idx]
 
-                if alt0 < 0:
-                    alt0 = traf.alt[idx]
+                    latf = acrte.wplat[-1]
+                    lonf = acrte.wplon[-1]
+                    altf = acrte.wpalt[-1]
 
-                latf = acrte.wplat[-1]
-                lonf = acrte.wplon[-1]
-                altf = acrte.wpalt[-1]
+                    if altf < 0:
+                        mask = usepeflightplans.flight_plan_df_back_up['ac'] == acid
+                        altf = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['destination_alt']
 
-                if altf < 0:
-                    mask = usepeflightplans.flight_plan_df_back_up['ac'] == acid
-                    altf = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['destination_alt']
+                    orig = [lon0, lat0, alt0 ]
+                    dest = [lonf, latf, altf ]
+                    print( 'changed orig', orig, 'for', acid )
+                    print( 'changed dest', dest, 'for', acid )
 
-                orig = [lon0, lat0, alt0 ]
-                dest = [lonf, latf, altf ]
-                print( 'changed orig', orig, 'for', acid )
-                print( 'changed dest', dest, 'for', acid )
+                    # We check which if the origin is in a no fly zone
+                    cond = ( segments_df['lon_min'] <= lon0 ) & ( segments_df['lon_max'] > lon0 ) & \
+                        ( segments_df['lat_min'] <= lat0 ) & ( segments_df['lat_max'] > lat0 ) & \
+                        ( segments_df['z_min'] <= alt0 ) & ( segments_df['z_max'] > alt0 )
 
-                # We check which if the origin is in a no fly zone
-                cond = ( segments_df['lon_min'] <= lon0 ) & ( segments_df['lon_max'] > lon0 ) & \
-                    ( segments_df['lat_min'] <= lat0 ) & ( segments_df['lat_max'] > lat0 ) & \
-                    ( segments_df['z_min'] <= alt0 ) & ( segments_df['z_max'] > alt0 )
+                    if segments_df[cond].empty:
+                        segment_name_0 = 'N/A'
+                        # origin is not within any segment
+                        usepedronecommands.droneLanding( acid )
+                        continue
+                    else:
+                        segment_name_0 = segments_df[cond].index[0]
 
-                if segments_df[cond].empty:
-                    segment_name_0 = 'N/A'
-                    # origin is not within any segment
-                    usepedronecommands.droneLanding( acid )
-                    continue
-                else:
-                    segment_name_0 = segments_df[cond].index[0]
+                    # We check which is the destination is in a no fly zone
+                    cond = ( segments_df['lon_min'] <= lonf ) & ( segments_df['lon_max'] > lonf ) & \
+                        ( segments_df['lat_min'] <= latf ) & ( segments_df['lat_max'] > latf ) & \
+                        ( segments_df['z_min'] <= altf ) & ( segments_df['z_max'] > altf )
 
-                # We check which is the destination is in a no fly zone
-                cond = ( segments_df['lon_min'] <= lonf ) & ( segments_df['lon_max'] > lonf ) & \
-                    ( segments_df['lat_min'] <= latf ) & ( segments_df['lat_max'] > latf ) & \
-                    ( segments_df['z_min'] <= altf ) & ( segments_df['z_max'] > altf )
+                    if segments_df[cond].empty:
+                        segment_name_f = 'N/A'
+                        # origin is not within any segment
+                        usepedronecommands.droneLanding( acid )
+                        continue
+                    else:
+                        segment_name_f = segments_df[cond].index[0]
 
-                if segments_df[cond].empty:
-                    segment_name_f = 'N/A'
-                    # origin is not within any segment
-                    usepedronecommands.droneLanding( acid )
-                    continue
-                else:
-                    segment_name_f = segments_df[cond].index[0]
+                    if ( self.segments['speed_max'][segment_name_0] == 0 ) | ( self.segments['speed_max'][segment_name_f] == 0 ):
+                        # origin or destination is not allowed, so the drone lands
+                        usepedronecommands.droneLanding( acid )
+                        continue
 
-                if ( self.segments['speed_max'][segment_name_0] == 0 ) | ( self.segments['speed_max'][segment_name_f] == 0 ):
-                    # origin or destination is not allowed, so the drone lands
-                    usepedronecommands.droneLanding( acid )
-                    continue
+                    rerouting = usepestrategic.updateStrategicDeconflictionDrone( acid, orig, dest )
 
-                rerouting = usepestrategic.updateStrategicDeconflictionDrone( acid, orig, dest )
+                    if rerouting:
+                        scn = usepedronecommands.rerouteDrone( acid )
 
-                if rerouting:
-                    scn = usepedronecommands.rerouteDrone( acid )
+                        acrte.wpstack[iactwp] = ['DEL {}'.format( acid ), scn]
 
-                    acrte.wpstack[iactwp] = ['DEL {}'.format( acid ), scn]
-
-            # 4th. To update the flight plans in the queue
-            usepeflightplans.reprocessFlightPlans()
+                # 4th. To update the flight plans in the queue
+                usepeflightplans.reprocessFlightPlans()
 
         self.calcWptDict()
         self.calcRecentPath()
