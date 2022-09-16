@@ -217,7 +217,7 @@ class segmentationService:
         # self.rules["wind_rules"]["wind_speed_th"] - wind speed threshold parameter in rules.json file
         # self.rules["wind_rules"]["turbulence_intensity_th"] - wind turbulence intensity threshold parameter in rules.json file
 
-        print( "Staring to process wind data." )
+        print( "Starting to process wind data." )
         wind_data = misc.process_wind_data( 
             ( self.rules["wind_rules"]["wind_data_folder"] + wind_file ), interp_UTM
         )
@@ -710,7 +710,7 @@ if __name__ == "__main__":
     # therefore the event file in this example is ".data/event/event.geojson"
 
     region = "Hannover"
-    windFile = "test_hannover_1m/test_hannover_1m_3d"
+    windFile = "scenario_1/USEPE_S1_3d"
     event = "event"
 
     with open( "usepe/segmentation_service/data/flight_log/drones_routes.dict", "rb" ) as f:
