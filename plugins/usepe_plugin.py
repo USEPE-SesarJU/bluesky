@@ -844,7 +844,7 @@ class UsepeDroneCommands( core.Entity ):
         layers_dict = usepegraph.layers_dict
 
         scenario_name = f'scenario_traffic_drone_{ac["id"]}.scn'
-        scenario_path = Path( 'usepe/temp', scenario_name )
+        scenario_path = Path( 'USEPE/temp', scenario_name )
         scenario_file = open( Path( 'scenario', scenario_path ), 'w' )
 
         if ac['purpose'] == 'delivery':
