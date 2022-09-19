@@ -142,9 +142,10 @@ def merge_cells( segments, id_parent ):
     segments["dissolve"] = segments.index
     for iid in segments.index:
         if segments.at[iid, "parent"] != None:
-            log_ii = np.array( id_parent ) == segments.at[iid, "parent"][-1]
-            if any( log_ii ):
-                segments.at[iid, "dissolve"] = np.array( id_parent )[log_ii][0]
+            if len( segments.at[iid, "parent"] ) > 0:
+                log_ii = np.array( id_parent ) == segments.at[iid, "parent"][-1]
+                if any( log_ii ):
+                    segments.at[iid, "dissolve"] = np.array( id_parent )[log_ii][0]
     # "name": lambda s: "; ".join(set(filter(lambda x: x != "nan", s))),
     segments = segments.dissolve( by="dissolve", aggfunc=aggFuncDict, sort=False )
     segments.index.name = ""
@@ -261,7 +262,7 @@ def update_wind( cells, windData, interp_UTM=False ):
                 ( grid_lat, grid_lon ),
             )
     else:
-        windLat = windData["lat"][:,midLon].to_numpy()
+        windLat = windData["lat"][:, midLon].to_numpy()
         windLon = windData["lon"][midLat,:].to_numpy()
 
     # # zu_3d and zw_3d are both relative to the height level of origin_z. origin_z is the altitude above sea level.
@@ -358,8 +359,8 @@ def process_wind_data( wind_file, interp_UTM=False ):
         # +np.power( windData["w"].interp( x=windData.coords["xu"], y=windData.coords["yv"] ), 2 )
     )
 
-    windData["u"] = windData["u"][0,0,0]
-    windData["v"] = windData["v"][0,0,0]
+    windData["u"] = windData["u"][0, 0, 0]
+    windData["v"] = windData["v"][0, 0, 0]
     # windData["w"] = windData["w"][0,0,0]
 
     if interp_UTM:
@@ -385,7 +386,7 @@ def process_wind_data( wind_file, interp_UTM=False ):
         #     dims=["alt_proc", "lat_proc", "lon_proc"],
         # )
     else:
-        windLat = windData["lat"][:,midLon].to_numpy()
+        windLat = windData["lat"][:, midLon].to_numpy()
         windLon = windData["lon"][midLat,:].to_numpy()
 
     # # zu_3d and zw_3d are both relative to the height level of origin_z. origin_z is the altitude above sea level.

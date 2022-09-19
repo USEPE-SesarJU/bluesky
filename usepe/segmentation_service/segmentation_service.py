@@ -558,7 +558,8 @@ class segmentationService:
         segments["dissolve"] = -segments.index
         for iid in segments.index:
             if segments.at[iid, "parent"] != None:
-                segments.at[iid, "dissolve"] = segments.at[iid, "parent"][-1]
+                if len( segments.at[iid, "parent"] ) > 0:
+                    segments.at[iid, "dissolve"] = segments.at[iid, "parent"][-1]
         segments = segments.groupby( by=["dissolve"], sort=False, dropna=False )
         segments = segments.aggregate( func={"capacity": "sum", "occupancy": "sum"} )
         id_parent = [
