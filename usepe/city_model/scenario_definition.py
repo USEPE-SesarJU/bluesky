@@ -5,6 +5,7 @@
 """
 from io import TextIOWrapper
 from pathlib import Path
+import configparser
 import copy
 import datetime
 import json
@@ -15,7 +16,6 @@ import string
 import sys
 
 from pyproj import Transformer
-import configparser
 
 from usepe.city_model.building_height import readCity
 from usepe.city_model.multi_di_graph_3D import MultiDiGrpah3D
@@ -1168,7 +1168,7 @@ def addFlightData( orig_lat, orig_lon, orig_alt,
     data['operation_duration'].append( operation_duration )
 
 
-def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G, segments, config ):
+def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G, segments, config, default_path ):
     '''
     This function creates distributed origins and destinations for the background traffic in
     the city area defined in the configuration file
@@ -1216,7 +1216,8 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
 
     # Altitudes
     alt_min = 0
-    rules = misc.load_rules()
+    rules = misc.load_rules( Path( default_path, "usepe", "segmentation_service", "config",
+                                  "rules.json" ) )
     alt_max = rules["building_layer"]
 
     flights_second = density * area / avg_flight_duration
@@ -1224,8 +1225,8 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
     total_flights = flights_second * simulation_time
 
     # Drone flight plan
-    min_flight_distance = 2500
-    max_flight_distance = 20000
+    min_flight_distance = 1500
+    max_flight_distance = 8000
     # Consider that the background traffic includes different types of drones
     drone_type_distribution = { "M600": 0.5,
                                 "Amzn": 0.3,
@@ -1248,17 +1249,18 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
             continue
 
         # Check if the origin or destination is in a restricted area (spd = 0)
+        '''
         if checkIfNoFlyZone( orig_lat, orig_lon, orig_alt, G, segments ):
             continue
         if checkIfNoFlyZone( dest_lat, dest_lon, dest_alt, G, segments ):
             continue
-
+        '''
         print( 'Creating flight {0}...'.format( n ) )
         drone_type = random.choices( list( drone_type_distribution.keys() ),
                                      weights=tuple( drone_type_distribution.values() ) )[0]
 
         # Max time for flight plan
-        time_submit_flight_plan = 15 * 60
+        time_submit_flight_plan = 0
         planned_time_s = n * time_spacing
         departure_time = '{}'.format( planned_time_s + time_submit_flight_plan )
         departure_time_seconds = planned_time_s + time_submit_flight_plan
@@ -1353,15 +1355,19 @@ def createDeliveryCSV( departure_times, frequencies, uncertainties, distributed,
 
     # Define the origin and destination points
 
-    # (orig_1_lat, orig_1_lon, orig_1_alt) = (52.4216, 9.6704, 50)
-    # (orig_2_lat, orig_2_lon, orig_2_alt) = (52.3145, 9.8171, 50)
-    # (orig_3_lat, orig_3_lon, orig_3_alt) = (52.3701, 9.7422, 50)
-    orig_1 = ( 52.4216, 9.6704, 50 )
-    orig_2 = ( 52.3145, 9.8171, 50 )
+    #===============================================================================================
+    # orig_1 = ( 52.4216, 9.6704, 50 )
+    # orig_2 = ( 52.3145, 9.8171, 50 )
+    # orig_3 = ( 52.3701, 9.7422, 50 )
+    #===============================================================================================
+    # Small region
+    orig_1 = ( 52.3891, 9.7236, 50 )
+    orig_2 = ( 52.3379, 9.7611, 50 )
     orig_3 = ( 52.3701, 9.7422, 50 )
     origins = [orig_1, orig_2, orig_3]
 
     # (dest_1_lat, dest_1_lon, dest_1_alt) = (52.3594, 9.7499, 25)
+    # dest_1 = ( 52.3594, 9.7499, 25 )
     dest_1 = ( 52.3594, 9.7499, 25 )
 
     # Checks the format

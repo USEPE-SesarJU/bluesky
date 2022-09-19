@@ -94,7 +94,7 @@ def entryNodes( G, segments, node, name, speed, next_node, config ):
     node_G = nearestNode3d( G, entry_lon, entry_lat, entry_low_height )
 
     # Connection to the city grid
-    G.add_edge( node_G, node_low, 0, oneway=False, segment='new', speed=50.0,
+    G.add_edge( node_G, node_low, 0, oneway=False, segment='new', speed=speed,
                 length=ox.distance.great_circle_vec( G.nodes[node_G]['y'],
                                                      G.nodes[node_G]['x'],
                                                      G.nodes[node_low]['y'],
@@ -129,9 +129,9 @@ def corridorCreation( G, segments, corridor_coordinates, altitude, speed, capaci
         segments - segments updated with the corridors
     '''
 
-    segments = defineSegment( segments, 0, 0, 0, 0, 0, 0, speed, capacity, name )
-    segments[name]['updated'] = False
-    segments[name]['new'] = False
+    # segments = defineSegment( segments, 0, 0, 0, 0, 0, 0, speed, capacity, name )
+    # segments[name]['updated'] = False
+    # segments[name]['new'] = False
 
     index = 0
     # nodes_G = []
