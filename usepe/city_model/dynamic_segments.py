@@ -41,14 +41,19 @@ def defineSegment( segments, lon_min, lon_max, lat_min, lat_max, z_min, z_max,
     Returns:
             segments (dictionary): updated dictionary with the segment information
     """
-    segments[name] = {'lon_min': lon_min,
+    segments[name] = {'class': 'white',
+                      'lon_min': lon_min,
                       'lon_max': lon_max,
                       'lat_min': lat_min,
                       'lat_max': lat_max,
                       'z_min': z_min,
                       'z_max': z_max,
-                      'speed': speed,
+                      'speed_min': 0,
+                      'speed_max': speed,
                       'capacity': capacity,
+                      'occupancy': 0,
+                      'geovect': 'NSEW',
+                      'parent': None,
                       'new': True,
                       'updated': True}
     return segments
