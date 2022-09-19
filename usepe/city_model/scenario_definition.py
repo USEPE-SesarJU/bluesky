@@ -306,7 +306,8 @@ def routeParameters( G, route, ac ):
     final_node['hdg'] = None
     # final_node['speed'] = None
     final_node['dist'] = None
-
+    if not 'speed' in final_node:
+        final_node['speed'] = 5  # m/s
     route_parameters[str( len( route ) - 1 )] = final_node
 
     return route_parameters
