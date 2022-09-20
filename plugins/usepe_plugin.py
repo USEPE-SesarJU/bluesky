@@ -234,7 +234,7 @@ class UsepeSegments( core.Entity ):
         with self.settrafarrays():
             self.recentpath = np.array( [], dtype=np.ndarray )
 
-        self.printRedSegments()
+        # self.printRedSegments()
 
     def referenceSegments( self ):
         ref_speed = 20
@@ -496,7 +496,7 @@ class UsepeSegments( core.Entity ):
                 pass
             else:
                 # Print red segments
-                self.printRedSegments()
+                # self.printRedSegments()
 
                 # 1st:  to update the graph
                 usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )

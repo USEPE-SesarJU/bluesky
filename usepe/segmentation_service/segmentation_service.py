@@ -34,6 +34,9 @@ class segmentationService:
         print( "Altitude split at building top level ", self.rules["building_layer"], " m DONE." )
 
         # # reset history of splitting during the initialization stage
+        # evaluate segment capacity
+        self.eval_capacity_m_3()
+
         self.cells = self.cells.reset_index( drop=True )
 
         self.cells["parent"] = None
@@ -130,28 +133,30 @@ class segmentationService:
 
     def eval_capacity_m_3( self ):
         capDensity = float( self.rules["capacity_m_3"] )
+        layer_width = float( self.rules["layer_width"] )
         for name, _ in self.rules["classes"].items():
             self.cells.loc[self.cells["class"] == name, "capacity"] = round( 
-                self.cells.loc[self.cells["class"] == name].geometry.area
-                * ( 111139 ** 2 )
-                * ( 
+                ( 
                     self.cells.loc[self.cells["class"] == name, "z_max"]
                     -self.cells.loc[self.cells["class"] == name, "z_min"]
-                )
+                ) / layer_width * np.ceil( 
+                self.cells.loc[self.cells["class"] == name].geometry.area
+                * ( 111139 ** 2 )
                 * capDensity
                 * self.rules["classes"][name]["capacity_factor"]
-            )
+            ) )
         return
 
     def eval_capacity_m_3_id( self, id ):
         capDensity = float( self.rules["capacity_m_3"] )
+        layer_width = float( self.rules["layer_width"] )
         self.cells.at[id, "capacity"] = round( 
+            ( self.cells.loc[id]["z_max"] - self.cells.loc[id]["z_min"] ) / layer_width * np.ceil( 
             self.cells.loc[id].geometry.area
             * ( 111139 ** 2 )
-            * ( self.cells.loc[id]["z_max"] - self.cells.loc[id]["z_min"] )
             * capDensity
             * self.rules["classes"][self.cells.loc[id]["class"]]["capacity_factor"]
-        )
+        ) )
         return
 
     def close_cell( self, id ):

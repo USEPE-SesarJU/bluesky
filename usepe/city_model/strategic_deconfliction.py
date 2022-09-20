@@ -346,6 +346,8 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
         if type( overpopulated_segment ) == str:
             if segments_step['speed_max'][int( overpopulated_segment )] == 0:
                 print( 'It is impossible to find a permitted route for the drone {}. It is not included in the simulation'.format( ac['id'] ) )
+                if delivery:
+                    return users, route, final_time + 1, final_time + 31
                 return users, route, final_time + 1
             segments_step['speed_max'][int( overpopulated_segment )] = 0
             segments_step['updated'][int( overpopulated_segment )] = True

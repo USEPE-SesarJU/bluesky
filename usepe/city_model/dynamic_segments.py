@@ -367,7 +367,8 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
     not_new_segments = segments_df[segments_df['new'] != True ]
 
     # Assign segments
-    G = assignSegmet2Edge( G, new_segments, not_new_segments )
+    if not new_segments.empty:
+        G = assignSegmet2Edge( G, new_segments, not_new_segments )
 
     # We select only the updated segments. The speed update of segments is performed only in
     # these segments
