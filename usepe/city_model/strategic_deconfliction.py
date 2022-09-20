@@ -468,15 +468,7 @@ def deconflictedSurveillancePathPlanning( orig1, dest1, orig2, dest2, departure_
         - delayed_time1 (int): Delay of the flight (first trip) in seconds
     """
 
-    users1, route1, delayed_time1, departure2 = deconflictedPathPlanning( orig1, dest1, departure_time, G,
-                                                    users, initial_time, final_time, segments, config,
-                                                    ac, only_rerouting=only_rerouting, delivery=True,
-                                                    hovering_time=wait_time )
-
-    users2, route2, _ = deconflictedPathPlanning( orig2, dest2, departure2, G, users1,
-                                        initial_time, final_time, segments, config, ac, only_rerouting=True )
-
-    return users2, [route1, route2], delayed_time1
+    return users, [], departure_time
 
 
 def deconflcitedScenario( orig, dest, ac, departure_time, G, users, initial_time, final_time,
