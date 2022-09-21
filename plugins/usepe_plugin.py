@@ -679,6 +679,18 @@ class UsepeStrategicDeconfliction( core.Entity ):
             v_max = 42
             vs_max = 6
             safety_volume_size = 1
+        elif row['drone'] == 'EC35':
+            v_max = 71.95
+            vs_max = 7.62
+            safety_volume_size = 1
+        elif row['drone'] == 'A320':
+            v_max = 0
+            vs_max = 0
+            safety_volume_size = 1
+        elif row['drone'] == 'B738':
+            v_max = 0
+            vs_max = 0
+            safety_volume_size = 1
 
         # operation_id used when a premade scenario has been created to be later inserted during the flight
         op_id = None
