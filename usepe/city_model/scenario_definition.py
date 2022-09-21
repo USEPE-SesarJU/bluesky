@@ -983,14 +983,14 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
         scenario_file_return.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' )
     elif state2['action'] == 'climbing':
         new_line0 = '{0} > {1} AT {2} DO {3} ATALT {4}, DEL {5}'.format( 
-            departure_time, ac['id'], state['ref_wpt'], ac['id'], layers_dict[route2[-1][0]] * m2ft, ac['id'] )
+            departure_time, ac['id'], state2['ref_wpt'], ac['id'], layers_dict[route2[-1][0]] * m2ft, ac['id'] )
         scenario_file_return.write( new_line0 + '\n' )
 
     scenario_file_return.close()
 
 
-def createSurveillanceFlightPlan(route1, ac, departure_time, G: MultiDiGrpah3D, layers_dict,
-                                 scenario_file: TextIOWrapper, scenario_path: Path, premade_scenario_path):
+def createSurveillanceFlightPlan( route1, ac, departure_time, G: MultiDiGrpah3D, layers_dict,
+                                 scenario_file: TextIOWrapper, scenario_path: Path, premade_scenario_path ):
     """
     Create a flight plan for a surveillance drone. All the commands are written in a text file.
 
@@ -1013,7 +1013,7 @@ def createSurveillanceFlightPlan(route1, ac, departure_time, G: MultiDiGrpah3D, 
 
     new_lines = []
 
-    new_lines.append(f'{departure_time}> PCALL {premade_scenario_path} {ac["id"]} {ac["type"]} REL')
+    new_lines.append( f'{departure_time}> PCALL {premade_scenario_path} {ac["id"]} {ac["type"]} REL' )
 
     for i in range( len( new_lines ) ):
         scenario_file.write( new_lines[i] + '\n' )

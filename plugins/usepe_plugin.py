@@ -858,7 +858,7 @@ class UsepeDroneCommands( core.Entity ):
         layers_dict = usepegraph.layers_dict
 
         scenario_name = f'scenario_traffic_drone_{ac["id"]}.scn'
-        scenario_path = Path( 'USEPE/temp', scenario_name )
+        scenario_path = Path( 'usepe/temp', scenario_name )
         scenario_file = open( Path( 'scenario', scenario_path ), 'w' )
 
         if ac['purpose'] == 'delivery':
@@ -887,7 +887,7 @@ class UsepeDroneCommands( core.Entity ):
         layers_dict = usepegraph.layers_dict
 
         scenario_name = f'scenario_traffic_drone_{ac["id"]}.scn'
-        scenario_path = Path( 'USEPE/temp', scenario_name )
+        scenario_path = Path( 'usepe/temp', scenario_name )
         scenario_file = open( Path( 'scenario', scenario_path ), 'w' )
 
         if ac['purpose'] == 'delivery':
@@ -1014,7 +1014,7 @@ class UsepeFlightPlan( core.Entity ):
                 if ( usepesegments.segments['speed_max'][segment_name_0] == 0 ) | ( usepesegments.segments['speed_max'][segment_name_f] == 0 ):
                     # origin or destination is not allowed, so the flight plan is rejected
                     self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
-                    print( 'Origin or destination is not allowed, so the flight plan is rejected' )
+                    print( 'Origin or destination is not allowed, so the flight plan is rejected: {} - {}s'.format( row['purpose'], str( sim.simt ) ) )
                 else:
                     usepestrategic.strategicDeconflictionDrone( df_row )
                     self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
