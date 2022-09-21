@@ -624,6 +624,7 @@ class UsepeStrategicDeconfliction( core.Entity ):
         self.delivery_drones = 0
         self.background_drones = 0
         self.surveillance_drones = 0
+        self.atm_aircraft = 0
 
     def initialisedUsers( self ):
         """
@@ -664,7 +665,10 @@ class UsepeStrategicDeconfliction( core.Entity ):
                 name = row['purpose'].upper() + str( self.background_drones )
             elif row['purpose'] == 'surveillance':
                 self.surveillance_drones += 1
-                name = row['purpose'].upper() + str( self.surveillance_drones )
+                name = row['purpose'].upper() + row['operation_id'].upper()
+            elif row['purpose'] == 'ATM':
+                self.atm_aircraft += 1
+                name = 'SURVEILLANCE_' + row['operation_id'].upper()
 
         # TODO: add all the drone types or read the information directly from BlueSky parameters
         if row['drone'] == 'M600':
@@ -714,6 +718,10 @@ class UsepeStrategicDeconfliction( core.Entity ):
                                             self.initial_time, self.final_time,
                                             copy.deepcopy( usepesegments.segments ), usepeconfig,
                                             ac, only_rerouting=False )
+        elif ac['purpose'] == 'ATM':
+            users = self.users
+            route = []
+            delayed_time = departure_time
         else:
             users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
                                                                    usepegraph.graph, self.users,
@@ -878,8 +886,12 @@ class UsepeDroneCommands( core.Entity ):
                                       scenario_file, scenario_path, hovering_time=30 )
         elif ac['purpose'] == 'surveillance':
             premade_scenario_path = Path( 'USEPE', 'exercise_3', 'surveillance_' + ac['op_id'] + '.scn' )
-            createSurveillanceFlightPlan( route, ac, departure_time, G, layers_dict,
-                scenario_file, scenario_path, premade_scenario_path )
+            createSurveillanceFlightPlan(route, ac, departure_time, G, layers_dict,
+                scenario_file, scenario_path, premade_scenario_path)
+        elif ac['purpose'] == 'ATM':
+            premade_scenario_path = Path( 'USEPE', 'exercise_3', ac['op_id'] + '.scn' )
+            createSurveillanceFlightPlan(route, ac, departure_time, G, layers_dict,
+                scenario_file, scenario_path, premade_scenario_path)
         else:
             createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
 
