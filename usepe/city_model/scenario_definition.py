@@ -1423,6 +1423,76 @@ def planSurveillanceDrone( orig, dest, departure_time, drone_model, operation_id
                   operation_duration=operation_duration )
 
 
+def createATMcsv(origins, departure_times, aircraft_models, operation_ids, data=None):
+    """
+    This function creates the csv with the flight plan data for ATM flights.
+
+    Args:
+        - origins [list]:
+        - departure_times [list]:
+        - aircraft_models [list]:
+
+    Output:
+        - Flight plan (.csv)
+    """
+
+    # Verify all lists are equal length
+    if not(len(origins) == len(departure_times) == len(aircraft_models) == len(operation_ids)):
+        raise ValueError( 'All lists provided must be of equal length.' )
+
+    if data is None:
+        # Data to be included in the CSV file
+        data = { 'origin_lat': [], 'origin_lon': [], 'origin_alt': [],
+                'destination_lat': [], 'destination_lon': [], 'destination_alt': [],
+                'departure': [],
+                'departure_s': [],
+                'drone': [],
+                'purpose': [],
+                'operation_id': [],
+                'operation_duration': [],
+                'planned_time_s': []}
+
+    for i in range( len( origins ) ):
+        print(f'Creating flight plan with origin: ({origins[i][0]}, {origins[i][1]})')
+        planATMaircraft(origins[i], departure_times[i], aircraft_models[i], operation_ids[i], data)
+
+    data_frame = pd.DataFrame(data)
+
+    file_name = 'ATM_flights.csv'
+
+    path = Path(sys.path[0], 'data', file_name)
+
+    data_frame.to_csv(path)
+
+    print(f'ATM flights stored in: {path}')
+
+
+def planATMaircraft(orig, departure_time, aircraft_model, operation_id, data):
+    """
+    This function takes information on the flight of 1 ATM aircraft and adds a planning time.
+
+    Args:
+        - orig [tuple]:
+        - departure_time [int]:
+        - aircraft_model [string]:
+        - data [dict]:
+    """
+
+    (orig_lat, orig_lon, orig_alt) = orig
+
+    # Flight plan must be submitted 20-30 min before departure, but for simulations we disregard this
+    submit_flight_plan = 0
+
+    addFlightData(orig_lat, orig_lon, orig_alt,
+                  0, 0, 0,
+                  departure_time,
+                  aircraft_model,
+                  'ATM',
+                  departure_time - submit_flight_plan,
+                  data,
+                  operation_id=operation_id)
+
+
 def createScenarioCSV( density, avg_flight_duration, departure_times, frequencies, simulation_time, G, segments, config ):
     '''
     This function creates distributed origins and destinations for the background traffic in
