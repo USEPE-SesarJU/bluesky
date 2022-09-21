@@ -204,7 +204,7 @@ class segmentationService:
         if sp:
             self.cells.at[id, "speed_max"] = max( sp )
         else:
-            self.cells.at[id, "speed_max"] = 0.0
+            self.cells.at[id, "speed_max"] = self.rules["allowed_uas_speed"][0]
 
         self.cells.at[id, "updated"] = True
         return
@@ -335,7 +335,8 @@ class segmentationService:
             if self.cells.at[id, "wind_avg"] > self.rules["wind_rules"]["wind_speed_th"]:
                 self.close_cell( id )
             elif self.cells.at[id, "wind_avg"] > 0.75 * self.rules["wind_rules"]["wind_speed_th"]:
-                self.cells.at[id, "speed_max"] /= 2.0
+                self.cells.at[id, "speed_max"] = max( self.cells.at[id, "speed_max"] / 2.0,
+                                                      self.rules["allowed_uas_speed"][0] )
                 self.cells.at[id, "updated"] = True
                 # self.decrease_speed(id)
 

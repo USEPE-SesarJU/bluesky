@@ -370,18 +370,19 @@ class UsepeSegments( core.Entity ):
                 if not self.strategic_wind_updated:
                     self.segmentation_service.update_wind_strat( wind_file, False )  # strategic update rules based on wind data
                     self.strategic_wind_updated = True
-                self.segmentation_service.update_wind_tact( usepeflightplans.route_dict,
-                                                        self.recentpath,
-                                                        None,
-                                                        traf.id,
-                                                        usepegraph.graph )  # tactical update rules
+                if traf.ntraf > 0:
+                    self.segmentation_service.update_wind_tact( usepeflightplans.route_dict,
+                                                                self.recentpath,
+                                                                None,
+                                                                traf.id,
+                                                                usepegraph.graph )  # tactical update rules
             # else:
             #    print("No wind path specified, skipping all wind simulation!")
 
             # TRAFFIC #
-
-            self.segmentation_service.update_traffic_strat( self.recentpath )
-            self.segmentation_service.update_traffic_tact( self.recentpath )
+            if traf.ntraf > 0:
+                self.segmentation_service.update_traffic_strat( self.recentpath )
+                self.segmentation_service.update_traffic_tact( self.recentpath )
 
             # CONFLICTS #
             self.segmentation_service.update_conflict( currentconf, currentconf_loc,
@@ -886,12 +887,12 @@ class UsepeDroneCommands( core.Entity ):
                                       scenario_file, scenario_path, hovering_time=30 )
         elif ac['purpose'] == 'surveillance':
             premade_scenario_path = Path( 'USEPE', 'exercise_3', 'surveillance_' + ac['op_id'] + '.scn' )
-            createSurveillanceFlightPlan(route, ac, departure_time, G, layers_dict,
-                scenario_file, scenario_path, premade_scenario_path)
+            createSurveillanceFlightPlan( route, ac, departure_time, G, layers_dict,
+                scenario_file, scenario_path, premade_scenario_path )
         elif ac['purpose'] == 'ATM':
             premade_scenario_path = Path( 'USEPE', 'exercise_3', ac['op_id'] + '.scn' )
-            createSurveillanceFlightPlan(route, ac, departure_time, G, layers_dict,
-                scenario_file, scenario_path, premade_scenario_path)
+            createSurveillanceFlightPlan( route, ac, departure_time, G, layers_dict,
+                scenario_file, scenario_path, premade_scenario_path )
         else:
             createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
 
