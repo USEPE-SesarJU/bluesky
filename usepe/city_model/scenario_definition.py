@@ -1106,7 +1106,7 @@ def addFlightData( orig_lat, orig_lon, orig_alt,
     data['operation_duration'].append( operation_duration )
 
 
-def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G, segments, config, default_path ):
+def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G, segments, config, default_path, data=None):
     '''
     This function creates distributed origins and destinations for the background traffic in
     the city area defined in the configuration file
@@ -1121,16 +1121,17 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
     Output:
         csv file
     '''
-    # Data to be included in the CSV file
-    data = { 'origin_lat': [], 'origin_lon': [], 'origin_alt': [],
-             'destination_lat': [], 'destination_lon': [], 'destination_alt': [],
-             'departure': [],
-             'departure_s': [],
-             'drone': [],
-             'purpose': [],
-             'operation_id': [],
-             'operation_duration': [],
-             'planned_time_s': []}
+    if data is None:
+        # Data to be included in the CSV file
+        data = { 'origin_lat': [], 'origin_lon': [], 'origin_alt': [],
+                'destination_lat': [], 'destination_lon': [], 'destination_alt': [],
+                'departure': [],
+                'departure_s': [],
+                'drone': [],
+                'purpose': [],
+                'operation_id': [],
+                'operation_duration': [],
+                'planned_time_s': []}
 
     # Area of study
     mode = config['City'].get( 'mode' )
@@ -1224,6 +1225,7 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
 
     print( 'Background traffic stored in : {0}'.format( path ) )
 
+
 def createDeliveryDrone( orig, dest, departure_time, frequency, uncertainty, distributed, simulation_time, data ):  # Add uncertainty / distribute
     ( orig_lat, orig_lon, orig_alt ) = orig
     ( dest_lat, dest_lon, dest_alt ) = dest
@@ -1261,7 +1263,7 @@ def createDeliveryDrone( orig, dest, departure_time, frequency, uncertainty, dis
                       departure_time,
                       data )
 
-def createDeliveryCSV( departure_times, frequencies, uncertainties, distributed, simulation_time ):
+def createDeliveryCSV(departure_times, frequencies, uncertainties, distributed, simulation_time, data=None):
     '''
     This function creates the csv containing the data of the delivery drones
 
@@ -1280,16 +1282,17 @@ def createDeliveryCSV( departure_times, frequencies, uncertainties, distributed,
     Output:
         csv
     '''
-    # Data to be included in the CSV file
-    data = { 'origin_lat': [], 'origin_lon': [], 'origin_alt': [],
-             'destination_lat': [], 'destination_lon': [], 'destination_alt': [],
-             'departure': [],
-             'departure_s': [],
-             'drone': [],
-             'purpose': [],
-             'operation_id': [],
-             'operation_duration': [],
-             'planned_time_s': []}
+    if data is None:
+        # Data to be included in the CSV file
+        data = { 'origin_lat': [], 'origin_lon': [], 'origin_alt': [],
+                'destination_lat': [], 'destination_lon': [], 'destination_alt': [],
+                'departure': [],
+                'departure_s': [],
+                'drone': [],
+                'purpose': [],
+                'operation_id': [],
+                'operation_duration': [],
+                'planned_time_s': []}
 
     # Define the origin and destination points
 
@@ -1331,7 +1334,7 @@ def createDeliveryCSV( departure_times, frequencies, uncertainties, distributed,
     print( 'Delivery drones stored in : {0}'.format( path ) )
 
 
-def createSurveillanceCSV( origins, destinations, departure_times, drone_models, operation_ids, operation_durations, simulation_time ):
+def createSurveillanceCSV(origins, destinations, departure_times, drone_models, operation_ids, operation_durations, simulation_time, data=None):
     """
     This function creates the csv with the flight plan data of surveillance drones.
 
@@ -1362,36 +1365,37 @@ def createSurveillanceCSV( origins, destinations, departure_times, drone_models,
     if not( len( origins ) == len( destinations ) == len( departure_times ) == len( drone_models ) ):
         raise ValueError( 'All lists provided must be of equal length.' )
 
-    # Data to be included in the CSV file
-    data = { 'origin_lat': [], 'origin_lon': [], 'origin_alt': [],
-             'destination_lat': [], 'destination_lon': [], 'destination_alt': [],
-             'departure': [],
-             'departure_s': [],
-             'drone': [],
-             'purpose': [],
-             'operation_id': [],
-             'operation_duration': [],
-             'planned_time_s': []}
+    if data is None:
+        # Data to be included in the CSV file
+        data = { 'origin_lat': [], 'origin_lon': [], 'origin_alt': [],
+                'destination_lat': [], 'destination_lon': [], 'destination_alt': [],
+                'departure': [],
+                'departure_s': [],
+                'drone': [],
+                'purpose': [],
+                'operation_id': [],
+                'operation_duration': [],
+                'planned_time_s': []}
 
-    for i in range( len( origins ) ):
-        print( f'Creating flight plan with origin: ({origins[i][0]}, {origins[i][1]}) and destination: ({destinations[i][0]}, {destinations[i][1]})' )
-        planSurveillanceDrone( origins[i], destinations[i], departure_times[i], drone_models[i],
-            operation_ids[i], operation_durations[i], data )
+    for i in range(len(origins)):
+        print(f'Creating flight plan with origin: ({origins[i][0]}, {origins[i][1]}) and destination: ({destinations[i][0]}, {destinations[i][1]})')
+        planSurveillanceDrone(origins[i], destinations[i], departure_times[i], drone_models[i],
+            operation_ids[i], operation_durations[i], data)
 
-    data_frame = pd.DataFrame( data )
+    data_frame = pd.DataFrame(data)
 
     file_name = 'surveillance_' + \
         str( departure_times ).replace( '[', '' ).replace( ']', '' ).replace( ', ', '-' ) + \
         '_' + str( simulation_time ) + '.csv'
 
-    path = Path( sys.path[0], 'data', file_name )
+    path = Path(sys.path[0], 'data', file_name)
 
-    data_frame.to_csv( path )
+    data_frame.to_csv(path)
 
-    print( f'Delivery drones stored in: {path}' )
+    print(f'Surveillance drones stored in: {path}')
 
 
-def planSurveillanceDrone( orig, dest, departure_time, drone_model, operation_id, operation_duration, data ):
+def planSurveillanceDrone(orig, dest, departure_time, drone_model, operation_id, operation_duration, data):
     """
     This function takes information on the flight of 1 surveillance drone and adds a planning time.
 
@@ -1406,13 +1410,13 @@ def planSurveillanceDrone( orig, dest, departure_time, drone_model, operation_id
         - operation_duration: Operation duration in seconds, type: int
         - data:               Stores all the flight plans, type: dict
     """
-    ( orig_lat, orig_lon, orig_alt ) = orig
-    ( dest_lat, dest_lon, dest_alt ) = dest
+    (orig_lat, orig_lon, orig_alt) = orig
+    (dest_lat, dest_lon, dest_alt) = dest
 
-    # Flight plan must be submitted 10 min before departure
-    submit_flight_plan = 15 * 60
+    # Flight plan must be submitted 20-30 min before departure, but for simulations we disregard this
+    submit_flight_plan = 0
 
-    addFlightData( orig_lat, orig_lon, orig_alt,
+    addFlightData(orig_lat, orig_lon, orig_alt,
                   dest_lat, dest_lon, dest_alt,
                   departure_time,
                   drone_model,
@@ -1420,7 +1424,7 @@ def planSurveillanceDrone( orig, dest, departure_time, drone_model, operation_id
                   departure_time - submit_flight_plan,
                   data,
                   operation_id=operation_id,
-                  operation_duration=operation_duration )
+                  operation_duration=operation_duration)
 
 
 def createATMcsv(origins, departure_times, aircraft_models, operation_ids, data=None):
@@ -1493,7 +1497,7 @@ def planATMaircraft(orig, departure_time, aircraft_model, operation_id, data):
                   operation_id=operation_id)
 
 
-def createScenarioCSV( density, avg_flight_duration, departure_times, frequencies, simulation_time, G, segments, config ):
+def createScenarioCSV(file_name, nPlans, background_traffic=None, delivery=None, surveillance=None, atm=None):
     '''
     This function creates distributed origins and destinations for the background traffic in
     the city area defined in the configuration file and for the delivery drones defined by the user
@@ -1513,14 +1517,54 @@ def createScenarioCSV( density, avg_flight_duration, departure_times, frequencie
         background csv file
         delivery csv file
     '''
-    # Add background traffic
-    print( 'Creating background traffic...' )
-    createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G, segments, config )
 
-    # Add operation scenario (delivery)
-    print( 'Creating delivery drones...' )
-    createDeliveryCSV( departure_times, frequencies, simulation_time )
+    for plan in range(1, nPlans + 1):
+        # Data to be included in the CSV file
+        data = { 'origin_lat': [], 'origin_lon': [], 'origin_alt': [],
+                'destination_lat': [], 'destination_lon': [], 'destination_alt': [],
+                'departure': [],
+                'departure_s': [],
+                'drone': [],
+                'purpose': [],
+                'operation_id': [],
+                'operation_duration': [],
+                'planned_time_s': []}
 
+        if background_traffic is not None:
+            # Add background traffic
+            print('Creating background traffic...')
+            createBackgroundTrafficCSV(background_traffic['density'], background_traffic['avg_flight_duration'],
+                background_traffic['simulation_time'], background_traffic['G'], background_traffic['segments'],
+                background_traffic['config'], background_traffic['default_path'], data)
+
+        if delivery is not None:
+            # Add operation scenario (delivery)
+            print('Creating delivery drones...')
+            createDeliveryCSV(delivery['departure_times'], delivery['frequencies'],
+                delivery['uncertainties'], delivery['distributed'],
+                delivery['simulation_time'], data)
+
+        if surveillance is not None:
+            # Add surveillance scenario
+            print('Creating surveillance drones...')
+            createSurveillanceCSV(surveillance['origins'], surveillance['destinations'],
+                surveillance['departure_times'], surveillance['drone_models'], surveillance['operation_ids'],
+                surveillance['operation_durations'], surveillance['simulation_time'], data)
+
+        if atm is not None:
+            # Add ATM scenario
+            print('Creating ATM flights...')
+            createATMcsv(atm['origins'], atm['departure_times'], atm['aircraft_models'], atm['operation_ids'], data)
+
+        data_frame = pd.DataFrame(data)
+
+        fName = file_name + '_' + str(plan) + '.csv'
+
+        path = Path(sys.path[0], 'data', fName)
+
+        data_frame.to_csv(path)
+
+        print(f'Flight plans stored in: {path}')
 
 
 # def createAllDroneScenario( total_drones ):
