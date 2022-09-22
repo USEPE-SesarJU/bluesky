@@ -103,6 +103,12 @@ def nearestNode3d( G, lon, lat, altitude, exclude_corridor=True ):
         filtered_latlon = list( filter( lambda node: str( node )[:3] != 'COR', nodes ) )
     else:
         filtered_latlon = nodes
+    
+    # Filter out nodes belonging to the 'priority' segment (these are strictly used by premade scenarios)
+    nodes = G.nodes
+    filter_priority = list(filter(lambda node: nodes[node]['segment'] == 'priority', nodes))
+    filtered_latlon = [x for x in filtered_latlon if x not in filter_priority]
+
     # Iterates to get the closest one
     nearest_node = filtered_latlon[0]
     delta_xyz = ( ( G.nodes[nearest_node]['z'] - altitude ) ** 2 +
