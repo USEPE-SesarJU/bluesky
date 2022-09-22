@@ -100,3 +100,4 @@ ssd.obj
 *.gfs
 *.nc
 plugins/invdKDtree.py
+cache/
