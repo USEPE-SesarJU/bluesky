@@ -9,7 +9,7 @@
 	"close_class": "red",
 	"allowed_uas_speed": [6.0,12.0,18.0,24.0],
 	"wind_rules": {
-		"wind_data_folder": "/home/jbueno/data/data/wind/",
+		"wind_data_folder": "usepe/segmentation_service/data/wind/",
 		"wind_speed_th": 8.0, 
 		"turbulence_intensity_th": 0.5,
 		"path_dev_th": 2e-5
