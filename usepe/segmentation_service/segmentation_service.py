@@ -599,10 +599,12 @@ class segmentationService:
                             ( flight_log_pos[ii][-1][3] > self.cells.iloc[cid[ind]]["z_min"] )
                             and ( flight_log_pos[ii][-1][3] < self.cells.iloc[cid[ind]]["z_max"] )
                         )
-                    ][0]
+                    ]
+                    if cid:
+                        cid = cid[0]
 
-                if cid >= 0:
-                    self.cells.at[self.cells.index[cid], "occupancy"] += 1
+                        if cid >= 0:
+                            self.cells.at[self.cells.index[cid], "occupancy"] += 1
 
         for id in self.cells.index:
             if self.cells.at[id, "occupancy"] > self.cells.at[id, "capacity"]:
