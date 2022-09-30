@@ -240,9 +240,9 @@ class UsepeSegments( core.Entity ):
         ref_speed = 20
         ref_capacity = 999
         reference_segments = self.segments.copy()
-        reference_segments['class'] = reference_segments['class'].apply( lambda x: x if x == 'black' else 'white' )
-        reference_segments['speed_max'] = reference_segments['class'].apply( lambda x: 0 if x == 'black' else ref_speed )
-        reference_segments['capacity'] = reference_segments['class'].apply( lambda x: 0 if x == 'black' else ref_capacity )
+        reference_segments['class'] = reference_segments['class'].apply( lambda x: x if ( x == 'black' or x == 'red' ) else 'white' )
+        reference_segments['speed_max'] = reference_segments['class'].apply( lambda x: 0 if ( x == 'black' or x == 'red' ) else ref_speed )
+        reference_segments['capacity'] = reference_segments['class'].apply( lambda x: 0 if ( x == 'black' or x == 'red' ) else ref_capacity )
 
         self.segments = reference_segments
 
