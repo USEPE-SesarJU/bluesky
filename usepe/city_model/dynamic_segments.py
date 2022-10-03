@@ -253,6 +253,8 @@ def applyGeovectoringRule( df, segments, G ):
     lon_O = G.nodes[O]['x']
     lon_D = G.nodes[D]['x']
 
+    speed = df.speed
+
     if rule == 'N':
         if lat_O > lat_D:
             speed = 0
@@ -265,8 +267,6 @@ def applyGeovectoringRule( df, segments, G ):
     elif rule == 'W':
         if lon_O < lon_D:
             speed = 0
-    else:
-        speed = df.speed
 
     return speed
 
