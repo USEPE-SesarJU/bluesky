@@ -453,8 +453,8 @@ class segmentationService:
             if c_km3h > self.rules["concentration_rules"]["conflict_th_km_3_h"]:
                 self.decrease_speed( id )
                 misc.split_alt( self.cells, id, "z", False )
-                id1 = segments.index.max()
-                id2 = segments.index.max() - 1
+                id1 = self.cells.index.max()
+                id2 = self.cells.index.max() - 1
                 # allow only the dominant ownship direction
                 angl = self.cells.at[id, "aoc"]
                 if angl >= -45 and angl <= 45:
