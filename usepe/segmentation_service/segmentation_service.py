@@ -452,16 +452,23 @@ class segmentationService:
 
             if c_km3h > self.rules["concentration_rules"]["conflict_th_km_3_h"]:
                 self.decrease_speed( id )
+                misc.split_alt( self.cells, id, "z", False )
+                id1 = segments.index.max()
+                id2 = segments.index.max() - 1
                 # allow only the dominant ownship direction
                 angl = self.cells.at[id, "aoc"]
                 if angl >= -45 and angl <= 45:
-                    self.cells.at[id, "geovect"] = "N"
+                    self.cells.at[id1, "geovect"] = "N"
+                    self.cells.at[id2, "geovect"] = "S"
                 elif angl > 45 and angl <= 135:
-                    self.cells.at[id, "geovect"] = "E"
+                    self.cells.at[id1, "geovect"] = "E"
+                    self.cells.at[id2, "geovect"] = "W"
                 elif angl > 135 and angl < -135:
-                    self.cells.at[id, "geovect"] = "S"
+                    self.cells.at[id1, "geovect"] = "S"
+                    self.cells.at[id2, "geovect"] = "N"
                 elif angl >= -135 and angl < -45:
-                    self.cells.at[id, "geovect"] = "W"
+                    self.cells.at[id1, "geovect"] = "W"
+                    self.cells.at[id2, "geovect"] = "E"
 
             elif self.cells.at[id, "geovect"] != "NSEW":
                 # sufficiently low conflict frequency -> open sector directions
