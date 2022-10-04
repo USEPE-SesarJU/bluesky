@@ -234,6 +234,13 @@ class UsepeSegments( core.Entity ):
         with self.settrafarrays():
             self.recentpath = np.array( [], dtype=np.ndarray )
 
+        self.currentconf = []
+        self.currentconf_loc = []
+        self.currentconf_hdg = []
+        self.currentconf_prev = []
+        self.currentconf_loc_prev = []
+        self.currentconf_hdg_prev = []
+
         # self.printRedSegments()
 
     def referenceSegments( self ):
@@ -332,30 +339,30 @@ class UsepeSegments( core.Entity ):
             # traf.id
 
             # Go through all conflict pairs and sort the IDs for easier matching
-            currentconf = [tuple( sorted( pair ) ) for pair in traf.cd.confpairs_unique]  # pairs of drones in conflict AT THIS MOMENT
-            # historic conflicts?
-
-            # for each pair in conflict, the latitude, longitude and altitude of the Closest Point of Approach (CPA)
-            currentconf_loc = []
-            for pair in currentconf:
-                pair_index = traf.cd.confpairs.index( pair )
-                drone_1_index = traf.id.index( pair[0] )
-
-                dist_to_cpa = traf.cd.dcpa[pair_index]  # check units
-
-                lat_cpa = traf.lat[drone_1_index] + ( dist_to_cpa * math.sin( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / 1E7 )
-                lon_cpa = traf.lon[drone_1_index] + ( dist_to_cpa * math.cos( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / ( 1E7 * math.cos( traf.lat[drone_1_index] ) ) )
-                alt_cpa = traf.alt[drone_1_index]
-
-                currentconf_loc.append( ( lat_cpa, lon_cpa, alt_cpa ) )
-
-            # for each pair in conflict, headings of each drone
-            currentconf_hdg = []
-            for pair in currentconf:
-                pair_index = traf.cd.confpairs.index( pair )
-                drone_1_index = traf.id.index( pair[0] )
-                drone_2_index = traf.id.index( pair[1] )
-                currentconf_hdg.append( ( traf.hdg[drone_1_index], traf.hdg[drone_2_index] ) )
+            # currentconf = [tuple( sorted( pair ) ) for pair in traf.cd.confpairs_unique]  # pairs of drones in conflict AT THIS MOMENT
+            # # historic conflicts?
+            #
+            # # for each pair in conflict, the latitude, longitude and altitude of the Closest Point of Approach (CPA)
+            # currentconf_loc = []
+            # for pair in currentconf:
+            #     pair_index = traf.cd.confpairs.index( pair )
+            #     drone_1_index = traf.id.index( pair[0] )
+            #
+            #     dist_to_cpa = traf.cd.dcpa[pair_index]  # check units
+            #
+            #     lat_cpa = traf.lat[drone_1_index] + ( dist_to_cpa * math.sin( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / 1E7 )
+            #     lon_cpa = traf.lon[drone_1_index] + ( dist_to_cpa * math.cos( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / ( 1E7 * math.cos( traf.lat[drone_1_index] ) ) )
+            #     alt_cpa = traf.alt[drone_1_index]
+            #
+            #     currentconf_loc.append( ( lat_cpa, lon_cpa, alt_cpa ) )
+            #
+            # # for each pair in conflict, headings of each drone
+            # currentconf_hdg = []
+            # for pair in currentconf:
+            #     pair_index = traf.cd.confpairs.index( pair )
+            #     drone_1_index = traf.id.index( pair[0] )
+            #     drone_2_index = traf.id.index( pair[1] )
+            #     currentconf_hdg.append( ( traf.hdg[drone_1_index], traf.hdg[drone_2_index] ) )
 
             # value of the conflict frequency threshold, e.g., 1 conflict / (km^2 * hour)
             # usepeconfig['Segmentation']['conflict_threshold']
@@ -385,8 +392,16 @@ class UsepeSegments( core.Entity ):
                 self.segmentation_service.update_traffic_tact( self.recentpath )
 
             # CONFLICTS #
-            self.segmentation_service.update_conflict( currentconf, currentconf_loc,
-                                                       currentconf_hdg, update_interval )
+            self.segmentation_service.update_conflict( self.currentconf_prev + self.currentconf, self.currentconf_loc_prev + self.currentconf_loc,
+                                                       self.currentconf_hdg_prev + self.currentconf_hdg, 2 * update_interval )
+
+            self.currentconf_prev = self.currentconf
+            self.currentconf_loc_prev = self.currentconf_loc
+            self.currentconf_hdg_prev = self.currentconf_hdg
+
+            self.currentconf = []
+            self.currentconf_loc = []
+            self.currentconf_hdg = []
 
             updated = True
             self.segmentation_service.export_cells()  # export .json file to "./data/examples"
@@ -408,6 +423,39 @@ class UsepeSegments( core.Entity ):
         segments = self.segments
 
         return updated, segments
+
+    def calRecentConflict( self ):
+        # Go through all conflict pairs and sort the IDs for easier matching
+        currentconf = [tuple( pair ) for pair in traf.cd.confpairs]  # pairs of drones in conflict AT THIS MOMENT
+        # historic conflicts?
+        currentconf = [pair for pair in currentconf if pair not in self.currentconf]
+        self.currentconf += currentconf
+        # for each pair in conflict, the latitude, longitude and altitude of the Closest Point of Approach (CPA)
+        currentconf_loc = []
+        for pair in currentconf:
+            pair_index = traf.cd.confpairs.index( pair )
+            drone_1_index = traf.id.index( pair[0] )
+
+            dist_to_cpa = traf.cd.dcpa[pair_index]  # check units
+
+            lat_cpa = traf.lat[drone_1_index] + ( dist_to_cpa * math.sin( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / 1E7 )
+            lon_cpa = traf.lon[drone_1_index] + ( dist_to_cpa * math.cos( traf.hdg[drone_1_index] * math.pi / 180 ) * 90 / ( 1E7 * math.cos( traf.lat[drone_1_index] ) ) )
+            alt_cpa = traf.alt[drone_1_index]
+
+            currentconf_loc.append( ( lat_cpa, lon_cpa, alt_cpa ) )
+
+        self.currentconf_loc += currentconf_loc
+
+        # for each pair in conflict, headings of each drone
+        currentconf_hdg = []
+        for pair in currentconf:
+            pair_index = traf.cd.confpairs.index( pair )
+            drone_1_index = traf.id.index( pair[0] )
+            drone_2_index = traf.id.index( pair[1] )
+            currentconf_hdg.append( ( traf.hdg[drone_1_index], traf.hdg[drone_2_index] ) )
+
+        self.currentconf_hdg += currentconf_hdg
+
 
     def calcRecentPath( self ):
 
@@ -593,6 +641,7 @@ class UsepeSegments( core.Entity ):
 
         self.calcWptDict()
         self.calcRecentPath()
+        self.calRecentConflict()
 
         self.segmentation_service.cells["new"] = False
         self.segmentation_service.cells["updated"] = False
