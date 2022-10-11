@@ -125,7 +125,7 @@ class myMLP(nn.Module):
 # ----------------------------------------------------------------------------
 
 # List of the names of all the data loggers
-loggers = ['USEPE_ML_Input', 'USEPE_ML_Conflict_Number']
+loggers = ['USEPE_ML_Input', 'USEPE_ML_Conflict_Number', 'USEPE_ML_Input_All_Aircrafts']
 ex_loggers = ['USEPE_ML_LoS_Number', 'USEPE_ML_Conflict_Duration', 'USEPE_ML_LoS_Duration', 'USEPE_ML_Conflict_Duration_Period', 'USEPE_ML_LoS_Duration_Period'] #EXTEND
 strategic_logger = ['USEPE_ML_Strategical_Phase']
 tactical_ex_loggers = ['USEPE_ML_TACTICAL_LoS_Number', 'USEPE_ML_TACTICAL_Conflict_Duration', 'USEPE_ML_TACTICAL_LoS_Duration', 'USEPE_ML_TACTICAL_Conflict_Duration_Period', 'USEPE_ML_TACTICAL_LoS_Duration_Period']
@@ -138,6 +138,11 @@ traffic_content = ['id', 'type', 'lat', 'lon', 'alt', 'distflown', 'hdg', 'trk',
 ml_input_header = \
     'Machine Learning Log for Input\n' + \
     'simt, id, type, lat, lon, alt, distflown, hdg, trk, tas, gs, gsnorth, gseast, cas, M, selspd, aptas, selalt'
+
+ml_input_header_all_aircraft = \
+    'Machine Learning Log for Input\n' + \
+    'log_simt, simt, id, type, lat, lon, alt, distflown, hdg, trk, tas, gs, gsnorth, gseast, cas, M, selspd, aptas, selalt'
+
 
 conf_count_header = \
     'Number of total conflicts for every pair\n' + \
@@ -179,6 +184,7 @@ SCENARIO_DIR = os.path.join(PLUGIN_DIR, '..', 'scenario')
 aircraft_ids = None
 ml_inputlog = None
 count_conflog = None
+ml_inputlog_all_aircrafts = None
 # The data loggers (EXTEND)
 count_loslog = None
 duration_conflog = None
@@ -207,9 +213,11 @@ def init_plugin():
 
     global count_conflog
     global ml_inputlog
+    global ml_inputlog_all_aircrafts
     # Create log file (still empty)
     ml_inputlog = datalog.crelog(loggers[0], None, ml_input_header)
     count_conflog = datalog.crelog(loggers[1], None, conf_count_header)
+    ml_inputlog_all_aircrafts = datalog.crelog(loggers[2], None, ml_input_header_all_aircraft)
     # Get aircraft ids
     #aircraft_ids = []
     #for id in traf.id:
@@ -323,6 +331,7 @@ class USEPE_ML(core.Entity):
         self.use_nn = False # for USEPE_ML NN
 
         self.conf_counter = {}
+        self.traf_info_in_sim = {}
         self.los_counter = {}  # for USEPE_ML EXTRA
         self.duration_conf_start_dic = {}  # for USEPE_ML EXTEND
         self.duration_conf_end_dic = {}  # for USEPE_ML EXTEND
@@ -333,6 +342,7 @@ class USEPE_ML(core.Entity):
         self.pair_index = 1
 
         self.start_traf_num = len(traf.id)
+        self.all_traf_list = list()
 
         self.conf_num_in_sec = dict() # sec:[pair_names]
         self.los_num_in_sec = dict() # sec:[pair_names]
@@ -518,6 +528,7 @@ class USEPE_ML(core.Entity):
         self.prevlos = list()
 
         self.conf_counter = {}
+        self.traf_info_in_sim = {}
         self.los_counter = {}
         self.duration_conf_start_dic = {}
         self.duration_conf_end_dic = {}
@@ -528,6 +539,7 @@ class USEPE_ML(core.Entity):
         self.pair_index = 1
 
         self.start_traf_num = len(traf.id)
+        self.all_traf_list = list()
 
         self.conf_num_in_sec = dict()
         self.los_num_in_sec = dict()
@@ -550,28 +562,38 @@ class USEPE_ML(core.Entity):
             if self.scn_fname_list is not None:
                 self.output_wpt(self.scn_fname_list)
                 self.is_strategic = False
+        # Update trafs
+        for i in range(len(traf.id)):
+            traf_name = traf.id[i]
+            if traf_name not in self.all_traf_list:
+                self.all_traf_list.append(traf_name)
 
     # Write ML Log
     def input_logger(self):
         # Get each aircraft info
         ml_input_dic = {}  # name: List[]
         simt = bs.sim.simt
+        self.traf_info_in_sim[simt] = {} # Sec: {name: info}
+
         for idx, name in enumerate(traffic_content):
             value = getattr(traf, name)
             ml_input_dic[name] = value
-        # Write
+        # Write & Append the info in sec
         for i in range(len(traf.id)):
+            traf_name = traf.id[i]
             input_log = []
             for name in traffic_content:
                 try:
                     input_log.append(ml_input_dic[name][i])
                 except:
                     continue
-
+            # Write to log
             if (self.is_tactical is False) and (self.is_tactical_extend is False):
                 ml_inputlog.log([input_log])
             else:
                 tactical_log.log([input_log])
+            # Append to dic
+            self.traf_info_in_sim[simt][traf_name] = input_log
 
     # Strategic
     def print_ontime_sep_score(self):
@@ -964,7 +986,7 @@ class USEPE_ML(core.Entity):
     def summarize_logger(self):
         # Write Stocked Info
         conf_count_log = []
-        for (a, b) in itertools.combinations(aircraft_ids, 2):
+        for (a, b) in itertools.combinations(self.all_traf_list, 2):
             # Update index
             if "{}&{}".format(a, b) not in self.pair_index_dic.keys():
                 self.pair_index_dic["{}&{}".format(a, b)] = self.pair_index
@@ -980,12 +1002,26 @@ class USEPE_ML(core.Entity):
         else:
             tactical_conflog.log(conf_count_log)
 
+        # Write Stocked Info (All aurcraft in sec)
+        ml_input_all_aircraft = []
+        for simt in self.traf_info_in_sim.keys():
+            for traf_name in self.all_traf_list:
+                # Append with info
+                if traf_name in self.traf_info_in_sim[simt].keys():
+                    log = [simt] + self.traf_info_in_sim[simt][traf_name]
+                    ml_input_all_aircraft.append(log)
+                # Append filling NaN
+                else:
+                    log = [simt, traf_name] + [np.nan for i in range(len(traffic_content)-1)]
+                    ml_input_all_aircraft.append(log)
+        ml_inputlog_all_aircrafts.log(ml_input_all_aircraft)
+
     def summarize_with_extend_logger(self):
         # Write Stocked Info
         conf_count_log, los_count_log = [], []
         conf_duration_log, los_duration_log = [], []
         conf_duration_period_log, los_duration_period_log = [], []
-        for (a, b) in itertools.combinations(aircraft_ids, 2):
+        for (a, b) in itertools.combinations(self.all_traf_list, 2):
             # Update index
             if "{}&{}".format(a, b) not in self.pair_index_dic.keys():
                 self.pair_index_dic["{}&{}".format(a, b)] = self.pair_index
@@ -1211,7 +1247,8 @@ class USEPE_ML(core.Entity):
             if self.is_basic is True and self.is_extra is False and self.is_extend is False:
                 if allloggers[loggers[0]].isopen():
                     if self.start_traf_num == 0:
-                        return True, f'USEPE_ML is disabled.'
+                        if len(self.all_traf_list) == 0:
+                            return True, f'USEPE_ML is disabled.'
                     self.summarize_logger()
                     output_loggers = loggers
 
@@ -1253,7 +1290,8 @@ class USEPE_ML(core.Entity):
                 # LOGGERS
                 if allloggers[loggers[0]].isopen():
                     if self.start_traf_num == 0:
-                        return True, f'USEPE_ML is disabled.'
+                        if len(self.all_traf_list) == 0:
+                            return True, f'USEPE_ML is disabled.'
                     self.summarize_logger()
                     output_loggers = loggers
 
@@ -1304,7 +1342,8 @@ class USEPE_ML(core.Entity):
                   # LOGGERS
                 if allloggers[loggers[0]].isopen():
                     if self.start_traf_num == 0:
-                        return True, f'USEPE_ML is disabled.'
+                        if len(self.all_traf_list) == 0:
+                            return True, f'USEPE_ML is disabled.'
                     self.summarize_logger()
                     self.summarize_with_extend_logger()
                     output_loggers = loggers + ex_loggers
@@ -1380,7 +1419,8 @@ class USEPE_ML(core.Entity):
                   # LOGGERS
                 if allloggers[loggers[0]].isopen():
                     if self.start_traf_num == 0:
-                        return True, f'USEPE_ML is disabled.'
+                        if len(self.all_traf_list) == 0:
+                            return True, f'USEPE_ML is disabled.'
                     self.summarize_logger()
                     self.summarize_with_extend_logger()
                     output_loggers = loggers + ex_loggers
@@ -1472,7 +1512,8 @@ class USEPE_ML(core.Entity):
             if self.is_tactical is True and self.is_extra is False and self.is_tactical_extend is False:
                 if allloggers[loggers[0]].isopen():
                     if self.start_traf_num == 0:
-                        return True, f'USEPE_ML is disabled.'
+                        if len(self.all_traf_list) == 0:
+                            return True, f'USEPE_ML is disabled.'
 
                     self.summarize_logger()
                     output_loggers = loggers
@@ -1514,7 +1555,8 @@ class USEPE_ML(core.Entity):
             if self.is_tactical is True and self.is_extra is True and self.is_tactical_extend is False:
                 if allloggers[loggers[0]].isopen():
                     if self.start_traf_num == 0:
-                        return True, f'USEPE_ML is disabled.'
+                        if len(self.all_traf_list) == 0:
+                            return True, f'USEPE_ML is disabled.'
 
                     self.summarize_logger()
                     output_loggers = loggers 
@@ -1563,7 +1605,8 @@ class USEPE_ML(core.Entity):
             if self.is_tactical is True and self.is_extra is False and self.is_tactical_extend is True:
                 if allloggers[loggers[0]].isopen():
                     if self.start_traf_num == 0:
-                        return True, f'USEPE_ML is disabled.'
+                        if len(self.all_traf_list) == 0:
+                            return True, f'USEPE_ML is disabled.'
 
                     self.summarize_logger()
                     self.summarize_with_extend_logger()
@@ -1631,7 +1674,8 @@ class USEPE_ML(core.Entity):
             if self.is_tactical is True and self.is_extra is True and self.is_tactical_extend is True:
                 if allloggers[loggers[0]].isopen():
                     if self.start_traf_num == 0:
-                        return True, f'USEPE_ML is disabled.'
+                        if len(self.all_traf_list) == 0:
+                            return True, f'USEPE_ML is disabled.'
 
                     self.summarize_logger()
                     self.summarize_with_extend_logger()
