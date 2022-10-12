@@ -434,13 +434,15 @@ class segmentationService:
                         ( conflict_loc[ii][2] > self.cells.iloc[coc[ind]]["z_min"] )
                         and ( conflict_loc[ii][2] < self.cells.iloc[coc[ind]]["z_max"] )
                     )
-                ][0]
+                ]
+                if coc:
+                    coc = coc[0]
 
-            if coc >= 0:
-                self.cells.at[self.cells.index[coc], "aoc"] = anglAvg[coc].update_angl_deg( 
-                    conflict_head[ii][0]
-                )
-                self.cells.at[self.cells.index[coc], "conflicts"] += 1
+                    if coc >= 0:
+                        self.cells.at[self.cells.index[coc], "aoc"] = anglAvg[coc].update_angl_deg(
+                            conflict_head[ii][0]
+                        )
+                        self.cells.at[self.cells.index[coc], "conflicts"] += 1
 
         for id in self.cells.index:
             c_km3h = self.cells.at[id, "conflicts"] / ( 
