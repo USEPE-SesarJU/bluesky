@@ -737,11 +737,11 @@ class UsepeStrategicDeconfliction( core.Entity ):
             v_max = 71.95
             vs_max = 7.62
             safety_volume_size = 1
-        elif row['drone'] == 'A320':
+        elif row['drone'] == 'A320': # Fixwing aircrafts do not have the same performance attributes as rotor aircrafts
             v_max = 0
             vs_max = 0
             safety_volume_size = 1
-        elif row['drone'] == 'B738':
+        elif row['drone'] == 'B738': # Fixwing aircrafts do not have the same performance attributes as rotor aircrafts
             v_max = 0
             vs_max = 0
             safety_volume_size = 1
@@ -1232,6 +1232,7 @@ class StateBasedUsepe( ConflictDetection ):
         return time_to_react
 
     def selectTable( self, drone, manoeuvre, gs ):
+        drone_code = 'OTHER'
         if drone == 'AMZN':
             drone_code = 'A'
         elif drone == 'M600':
