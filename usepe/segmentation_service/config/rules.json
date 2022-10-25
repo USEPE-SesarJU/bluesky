@@ -2,7 +2,7 @@
     "vll": [0, 300],
     "layer_width" : 25,
 	"capacity_km_sq": 100,
-	"capacity_m_3": 0.0000000011037,
+	"capacity_m_3": 0.0000011037,
 	"building_layer": 92, 
 	"aspect_ratio": 3.0,
 	"min_grid": 0.001,
@@ -21,7 +21,8 @@
 		
 	},
 	"event_rules":{
-		"event_data_folder": "./usepe/segmentation_service/data/event/"
+		"event_data_folder": "./usepe/segmentation_service/data/event/",
+        "event_ids": ["event_1", "event_2", "event_3", "event_4", "event_5", "event_6", "event_7", "event_8","event_9"]
 	},
     "classes": {
         "black": { "enter": false,  "altitude": [0, 300], "velocity": [0, 0], "capacity_factor": 0.0  },

@@ -411,7 +411,8 @@ class UsepeSegments( core.Entity ):
             print( 'Segments update completed.' )
 
         # The event rule is continuous
-        self.segmentation_service.update_event( 'event', sim.simt )  # event update rule
+        for event_id in self.segmentation_service.rules["event_rules"]["event_ids"]:
+            self.segmentation_service.update_event( event_id, sim.simt )  # event update rule
         if self.segmentation_service.event_update:
             updated = True
             self.segmentation_service.event_update = False
@@ -737,11 +738,11 @@ class UsepeStrategicDeconfliction( core.Entity ):
             v_max = 71.95
             vs_max = 7.62
             safety_volume_size = 1
-        elif row['drone'] == 'A320': # Fixwing aircrafts do not have the same performance attributes as rotor aircrafts
+        elif row['drone'] == 'A320':  # Fixwing aircrafts do not have the same performance attributes as rotor aircrafts
             v_max = 0
             vs_max = 0
             safety_volume_size = 1
-        elif row['drone'] == 'B738': # Fixwing aircrafts do not have the same performance attributes as rotor aircrafts
+        elif row['drone'] == 'B738':  # Fixwing aircrafts do not have the same performance attributes as rotor aircrafts
             v_max = 0
             vs_max = 0
             safety_volume_size = 1
