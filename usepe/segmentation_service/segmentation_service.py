@@ -33,6 +33,9 @@ class segmentationService:
         self.cells = misc.split_build( self.cells, self.rules["building_layer"] )
         print( "Altitude split at building top level ", self.rules["building_layer"], " m DONE." )
 
+        self.cells = misc.split_build( self.cells, 110 )
+        print( "Altitude split at building top level ", str( 110 ), " m DONE." )
+
         # # reset history of splitting during the initialization stage
         # evaluate segment capacity
         self.eval_capacity_m_3()
@@ -136,10 +139,10 @@ class segmentationService:
         layer_width = float( self.rules["layer_width"] )
         for name, _ in self.rules["classes"].items():
             self.cells.loc[self.cells["class"] == name, "capacity"] = round( 
-                ( 
+                np.ceil( ( 
                     self.cells.loc[self.cells["class"] == name, "z_max"]
                     -self.cells.loc[self.cells["class"] == name, "z_min"]
-                ) / layer_width * np.ceil( 
+                ) / layer_width *
                 self.cells.loc[self.cells["class"] == name].geometry.area
                 * ( 111139 ** 2 )
                 * capDensity
@@ -151,7 +154,7 @@ class segmentationService:
         capDensity = float( self.rules["capacity_m_3"] )
         layer_width = float( self.rules["layer_width"] )
         self.cells.at[id, "capacity"] = round( 
-            ( self.cells.loc[id]["z_max"] - self.cells.loc[id]["z_min"] ) / layer_width * np.ceil( 
+            np.ceil( ( self.cells.loc[id]["z_max"] - self.cells.loc[id]["z_min"] ) / layer_width *
             self.cells.loc[id].geometry.area
             * ( 111139 ** 2 )
             * capDensity
@@ -439,7 +442,7 @@ class segmentationService:
                     coc = coc[0]
 
                     if coc >= 0:
-                        self.cells.at[self.cells.index[coc], "aoc"] = anglAvg[coc].update_angl_deg(
+                        self.cells.at[self.cells.index[coc], "aoc"] = anglAvg[coc].update_angl_deg( 
                             conflict_head[ii][0]
                         )
                         self.cells.at[self.cells.index[coc], "conflicts"] += 1
@@ -650,15 +653,15 @@ class segmentationService:
         return
 
     def event_instance( self, event, now ):
-        close = ( self.cells.sindex.query( event.at[0, "geometry"], predicate="overlaps" ), )
-        close = np.append( 
-            close, self.cells.sindex.query( event.at[0, "geometry"], predicate="contains" )
-        )
-        close = np.append( 
-            close, self.cells.sindex.query( event.at[0, "geometry"], predicate="within" )
-        )
 
         if event.at[0, "begin"] == now:
+            close = ( self.cells.sindex.query( event.at[0, "geometry"], predicate="overlaps" ), )
+            close = np.append( 
+                close, self.cells.sindex.query( event.at[0, "geometry"], predicate="contains" )
+            )
+            close = np.append( 
+                close, self.cells.sindex.query( event.at[0, "geometry"], predicate="within" )
+            )
             # time.sleep( event.at[0, "begin"] - now )
             print( "Event started." )
             for idx in close:
@@ -667,6 +670,13 @@ class segmentationService:
 
         # time.sleep( event.at[0, "end"] - now )
         if event.at[0, "end"] == now:
+            close = ( self.cells.sindex.query( event.at[0, "geometry"], predicate="overlaps" ), )
+            close = np.append( 
+                close, self.cells.sindex.query( event.at[0, "geometry"], predicate="contains" )
+            )
+            close = np.append( 
+                close, self.cells.sindex.query( event.at[0, "geometry"], predicate="within" )
+            )
             print( "Event ended." )
             for idx in close:
                 self.restore_cell( idx )
