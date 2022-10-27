@@ -294,6 +294,9 @@ def updateGeovectoringRule( G, all_segments ):
 
     cond = ( edges['segment'].isin( updated_segments ) )
 
+    if edges[cond].empty:
+        return G
+
     pd.set_option( 'mode.chained_assignment', None )
     edges['speed'][cond] = edges[cond].apply( lambda x:
                                               applyGeovectoringRule( x, segments, G ), axis=1 )
