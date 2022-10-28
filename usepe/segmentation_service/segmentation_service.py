@@ -33,8 +33,9 @@ class segmentationService:
         self.cells = misc.split_build( self.cells, self.rules["building_layer"] )
         print( "Altitude split at building top level ", self.rules["building_layer"], " m DONE." )
 
-        self.cells = misc.split_build( self.cells, 110 )
-        print( "Altitude split at building top level ", str( 110 ), " m DONE." )
+        for altitude in self.rules["vertical_divisions"]:
+            self.cells = misc.split_build( self.cells, altitude )
+            print( "Altitude split at ", str( altitude ), " m DONE." )
 
         # # reset history of splitting during the initialization stage
         # evaluate segment capacity

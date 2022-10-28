@@ -2,27 +2,28 @@
     "vll": [0, 300],
     "layer_width" : 25,
 	"capacity_km_sq": 100,
-	"capacity_m_3": 0.0000011037,
-	"building_layer": 92, 
+	"capacity_m_3": 0.000000055185,
+	"building_layer": 92,
+    "vertical_divisions": [60, 110, 160],
 	"aspect_ratio": 3.0,
-	"min_grid": 0.001,
+	"min_grid": 0.0005,
 	"close_class": "red",
 	"allowed_uas_speed": [6.0,12.0,18.0,24.0],
 	"wind_rules": {
 		"wind_data_folder": "usepe/segmentation_service/data/wind/",
 		"wind_speed_th": 8.0, 
 		"turbulence_intensity_th": 0.5,
-		"path_dev_th": 2e-5
+		"path_dev_th": 2e-3
 	},
 	"concentration_rules":{
-		"conflict_th_km_3_h": 2500	
+		"conflict_th_km_3_h": 1500	
 	},
 	"traffic_rules":{
 		
 	},
 	"event_rules":{
 		"event_data_folder": "./usepe/segmentation_service/data/event/",
-        "event_ids": ["event_1", "event_2", "event_3", "event_4", "event_5", "event_6", "event_7", "event_8","event_9"]
+        "event_ids": []
 	},
     "classes": {
         "black": { "enter": false,  "altitude": [0, 300], "velocity": [0, 0], "capacity_factor": 0.0  },
