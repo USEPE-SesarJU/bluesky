@@ -1,5 +1,5 @@
-""" This plugin load the graph for the USEPE project. """
-# Import the global bluesky objects. Uncomment the ones you need
+""" This plugin enables the simulation of scenarios using the Dynamic Density Corridor Concept (D2C2). """
+
 from os import listdir
 from os.path import join
 from pathlib import Path
@@ -31,13 +31,13 @@ __copyright__ = '(c) Nommon 2022'
 
 
 active = False
-usepeconfig = None
-usepegraph = None
-usepesegments = None
-usepestrategic = None
-usepeflightplans = None
-usepedronecommands = None
-usepewind = None
+d2c2config = None
+d2c2graph = None
+d2c2segments = None
+d2c2strategic = None
+d2c2flightplans = None
+d2c2dronecommands = None
+d2c2wind = None
 updateInterval = 1.0
 
 
@@ -48,7 +48,7 @@ def init_plugin():
 
     # Configuration parameters
     config = {
-        'plugin_name': 'USEPE',
+        'plugin_name': 'D2C2',
         'plugin_type': 'sim',
         'update_interval': updateInterval,
 
@@ -62,11 +62,11 @@ def init_plugin():
         'reset': reset }
 
     stackfunctions = {
-        'USEPE': [
-            'USEPE CONFIG/ON/OFF, [config_path]',
+        'D2C2': [
+            'D2C2 CONFIG/ON/OFF, [config_path]',
             'txt, [word]',
-            usepe,
-            'Set path to configuration file, or turn on/off the plugin.'
+            d2c2,
+            'Set path to configuration file, or turn on/off the concept.'
         ]
     }
 
@@ -78,40 +78,40 @@ def update():
     if sim.simt % 600 == 0:
         print( 'Simulation time: {}'.format( sim.simt ) )
     if active:
-        if sim.simt > usepeconfig.getint( 'BlueSky', 'final_time' ):
+        if sim.simt > d2c2config.getint( 'BlueSky', 'final_time' ):
             stack.stack( 'RESET' )
             stack.stack( 'QUIT' )
 
-        usepegraph.update()
-        usepesegments.update()
-        usepestrategic.update()
-        usepeflightplans.update()
-        usepedronecommands.update()
+        d2c2graph.update()
+        d2c2segments.update()
+        d2c2strategic.update()
+        d2c2flightplans.update()
+        d2c2dronecommands.update()
     return
 
 
 def preupdate():
     if active:
-        usepegraph.preupdate()
-        usepesegments.preupdate()
-        usepestrategic.preupdate()
-        usepeflightplans.preupdate()
-        usepedronecommands.preupdate()
+        d2c2graph.preupdate()
+        d2c2segments.preupdate()
+        d2c2strategic.preupdate()
+        d2c2flightplans.preupdate()
+        d2c2dronecommands.preupdate()
     return
 
 
 def reset():
     if active:
-        usepegraph.reset()
-        usepesegments.reset()
-        usepestrategic.reset()
-        usepeflightplans.reset()
-        usepedronecommands.reset()
+        d2c2graph.reset()
+        d2c2segments.reset()
+        d2c2strategic.reset()
+        d2c2flightplans.reset()
+        d2c2dronecommands.reset()
     return
 
 
-def usepe( cmd, args='' ):
-    ''' USEPE command for the plugin
+def d2c2( cmd, args='' ):
+    ''' D2C2 command for the plugin
         Options:
         CONFIG: Set the configuration file, and initialise the various parts of the plugin.
         ON: Activate the plugin.
@@ -119,59 +119,57 @@ def usepe( cmd, args='' ):
     '''
 
     global active
-    global usepeconfig
+    global d2c2config
 
-    global usepegraph
-    global usepesegments
-    global usepeflightplans
-    global usepestrategic
-    global usepedronecommands
-    global usepewind
+    global d2c2graph
+    global d2c2segments
+    global d2c2flightplans
+    global d2c2strategic
+    global d2c2dronecommands
+    global d2c2wind
 
     if cmd == 'CONFIG':
         if args == '':
-            return False, f'"USEPE CONFIG" needs a valid path to configuration file.'
+            return False, f'"D2C2 CONFIG" needs a valid path to configuration file.'
 
         config_path = args
-        usepeconfig = configparser.ConfigParser()
-        usepeconfig.read( config_path )
+        d2c2config = configparser.ConfigParser()
+        d2c2config.read( config_path )
 
-        graph_path = usepeconfig['BlueSky']['graph_path']
-        flight_plan_csv_path = usepeconfig['BlueSky']['flight_plan_csv_path']
+        graph_path = d2c2config['BlueSky']['graph_path']
+        flight_plan_csv_path = d2c2config['BlueSky']['flight_plan_csv_path']
 
-        initial_time = int( usepeconfig['BlueSky']['initial_time'] )
-        final_time = int( usepeconfig['BlueSky']['final_time'] )
+        initial_time = int( d2c2config['BlueSky']['initial_time'] )
+        final_time = int( d2c2config['BlueSky']['final_time'] )
 
-        usepegraph = UsepeGraph( graph_path )
-        usepesegments = UsepeSegments()
-        usepestrategic = UsepeStrategicDeconfliction( initial_time, final_time )
-        usepeflightplans = UsepeFlightPlan( flight_plan_csv_path )
-        usepedronecommands = UsepeDroneCommands()
-        usepewind = UsepeWind()
+        d2c2graph = D2C2Graph( graph_path )
+        d2c2segments = D2C2Segments()
+        d2c2strategic = D2C2StrategicDeconfliction( initial_time, final_time )
+        d2c2flightplans = D2C2FlightPlan( flight_plan_csv_path )
+        d2c2dronecommands = D2C2DroneCommands()
+        d2c2wind = D2C2Wind()
 
         return True, f'The configuration file has been set.'
 
     elif cmd == 'ON':
-        if usepeconfig is not None:
+        if d2c2config is not None:
             # Activate the detection and resolution method, and logger
-            # configuration_path = r"{}".format( usepeconfig['BlueSky']['configuration_path'] )
-            # stack.stack( 'PCALL {} REL'.format( configuration_path ) )
             stack.stack( 'OP' )
             active = True
-            return True, f'USEPE Plugin is now active'
+            return True, f'D2C2 Plugin is now active'
         else:
-            return False, f'The configuration file is not provided. First use "USEPE CONFIG config_path"'
+            return False, f'The configuration file is not provided. First use "D2C2 CONFIG config_path"'
 
     elif cmd == 'OFF':
         active = False
-        return True, f'USEPE Plugin is now inactive'
+        return True, f'D2C2 plugin is now inactive'
 
     else:
         return False, f'Available commands are: CONFIG, ON, OFF'
 
 
-class UsepeGraph( core.Entity ):
-    ''' UsepeGraph new entity for BlueSky
+class D2C2Graph( core.Entity ):
+    ''' D2C2Graph new entity for BlueSky
     This class reads the graph that represents the city.
     '''
 
@@ -180,7 +178,7 @@ class UsepeGraph( core.Entity ):
 
         # self.graph = graph_path
         self.graph = read_my_graphml( graph_path )
-        self.layers_dict = layersDict( usepeconfig )
+        self.layers_dict = layersDict( d2c2config )
 
     def update( self ):  # Not used
         # stack.stack( 'ECHO Example update: creating a graph' )
@@ -194,8 +192,8 @@ class UsepeGraph( core.Entity ):
         return
 
 
-class UsepeSegments( core.Entity ):
-    ''' UsepeSegments new entity for BlueSky
+class D2C2Segments( core.Entity ):
+    ''' D2C2Segments new entity for BlueSky
     This class contains the segments information.
     The initial set of segments is loaded.
     When the segments are updated, this class has methods to update: i)graph; ii) routes in the tactical phase;
@@ -217,12 +215,12 @@ class UsepeSegments( core.Entity ):
 
         self.segments = pd.read_json( 'usepe/segmentation_service/data/examples/' + self.region + '.json', orient="records", lines=True )
 
-        if not usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
+        if not d2c2config.getboolean( 'BlueSky', 'D2C2' ):
             self.referenceSegments()
         else:
             self.addCorridorSegments()
 
-        usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )
+        d2c2graph.graph, self.segments = dynamicSegments( d2c2graph.graph, d2c2config, self.segments, deleted_segments=None )
 
         self.wpt_dict = {}
         self.wpt_bsc = {}
@@ -255,7 +253,7 @@ class UsepeSegments( core.Entity ):
 
     def addCorridorSegments( self ):
         # active_corridors = [1, 2, 3, 4]
-        active_corridors = usepeconfig['Corridors']['corridors'].split( ' ' )
+        active_corridors = d2c2config['Corridors']['corridors'].split( ' ' )
 
         for cor in active_corridors:
             name1 = 'COR{}'.format( str( cor ) )
@@ -269,7 +267,7 @@ class UsepeSegments( core.Entity ):
             z_min = 0
             z_max = 0
             speed_min = 0
-            speed_max = int( usepeconfig['Corridors']['speed'] )
+            speed_max = int( d2c2config['Corridors']['speed'] )
             capacity = 99
             occupancy = 0
             geovect = 'NSEW'
@@ -325,7 +323,7 @@ class UsepeSegments( core.Entity ):
         TODO. Here we have to include the function which updates the segments
         """
         updated = False
-        if not usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
+        if not d2c2config.getboolean( 'BlueSky', 'D2C2' ):
             return updated, self.segments
 
         update_interval = 300  # sec
@@ -333,8 +331,8 @@ class UsepeSegments( core.Entity ):
         if sim.simt % update_interval == 0:
             '''Inputs provided for the update rules'''
             # waypoints for each drone + graph
-            # usepeflightplans.route_dict  # dictionary containing the waypoints of each drone flying. Key - drone id, values - list of waypoints id
-            # usepegraph.node  # dict containng the features of each waypoint key - waypoint id, value dict with features and its values
+            # d2c2flightplans.route_dict  # dictionary containing the waypoints of each drone flying. Key - drone id, values - list of waypoints id
+            # d2c2graph.node  # dict containng the features of each waypoint key - waypoint id, value dict with features and its values
             # drone ids
             # traf.id
 
@@ -365,24 +363,24 @@ class UsepeSegments( core.Entity ):
             #     currentconf_hdg.append( ( traf.hdg[drone_1_index], traf.hdg[drone_2_index] ) )
 
             # value of the conflict frequency threshold, e.g., 1 conflict / (km^2 * hour)
-            # usepeconfig['Segmentation']['conflict_threshold']
+            # d2c2config['Segmentation']['conflict_threshold']
 
             # external file (csv, txt, cfg) that provides: area definition, event start time, event end time
 
             '''Update rules'''
 
             # WIND #
-            wind_file = usepeconfig['Segmentation_service']['wind_path']
+            wind_file = d2c2config['Segmentation_service']['wind_path']
             if wind_file:
                 if not self.strategic_wind_updated:
                     self.segmentation_service.update_wind_strat( wind_file, False )  # strategic update rules based on wind data
                     self.strategic_wind_updated = True
                 if traf.ntraf > 0:
-                    self.segmentation_service.update_wind_tact( usepeflightplans.route_dict,
+                    self.segmentation_service.update_wind_tact( d2c2flightplans.route_dict,
                                                                 self.recentpath,
                                                                 None,
                                                                 traf.id,
-                                                                usepegraph.graph )  # tactical update rules
+                                                                d2c2graph.graph )  # tactical update rules
             # else:
             #    print("No wind path specified, skipping all wind simulation!")
 
@@ -472,7 +470,7 @@ class UsepeSegments( core.Entity ):
             else:
                 actwpt_alt = acrte.wpalt[iactwp]
 
-            actwpt = nearestNode3d( usepegraph.graph,
+            actwpt = nearestNode3d( d2c2graph.graph,
                                     acrte.wplon[iactwp],
                                     acrte.wplat[iactwp],
                                     actwpt_alt,
@@ -487,7 +485,7 @@ class UsepeSegments( core.Entity ):
                 actwpt_alt = traf.ap.alt[i]
             else:
                 actwpt_alt = acrte.wpalt[i_prevactwpt]
-            prev_actwpt = nearestNode3d( usepegraph.graph,
+            prev_actwpt = nearestNode3d( d2c2graph.graph,
                                          acrte.wplon[i_prevactwpt],
                                          acrte.wplat[i_prevactwpt],
                                          acrte.wpalt[i_prevactwpt],
@@ -516,7 +514,7 @@ class UsepeSegments( core.Entity ):
             # If a new drone is created: update dict
             if acid not in self.wpt_dict:
 
-                if not usepeflightplans.route_dict[acid]:
+                if not d2c2flightplans.route_dict[acid]:
                     i = traf.id2idx( acid )
                     acrte = traf.ap.route[i]
                     route = acrte.wpname
@@ -525,16 +523,16 @@ class UsepeSegments( core.Entity ):
                         lon = acrte.wplon[j]
                         alt = acrte.wpalt[j]
                         name = route[j]
-                        usepegraph.graph.add_node( name, y=lat, x=lon, z=alt, segment='priority' )
-                    usepeflightplans.route_dict[acid] = route
+                        d2c2graph.graph.add_node( name, y=lat, x=lon, z=alt, segment='priority' )
+                    d2c2flightplans.route_dict[acid] = route
                 # Add entry in the dict
-                wpt_route_graph = usepeflightplans.route_dict[acid]
+                wpt_route_graph = d2c2flightplans.route_dict[acid]
                 wpt_dict_acid = wpt_bsc2wpt_graph( acrte.wpname, wpt_route_graph )
                 self.wpt_dict[acid] = wpt_dict_acid
             else:
                 # If the list of waypoints in bluesky changes: update dict
                 if wpt_bsc != self.wpt_bsc[acid]:
-                    wpt_route_graph = usepeflightplans.route_dict[acid]
+                    wpt_route_graph = d2c2flightplans.route_dict[acid]
                     wpt_dict_acid = wpt_bsc2wpt_graph( acrte.wpname, wpt_route_graph )
                     self.wpt_dict[acid] = wpt_dict_acid
                 else:
@@ -561,10 +559,10 @@ class UsepeSegments( core.Entity ):
                 # self.printRedSegments()
 
                 # 1st:  to update the graph
-                usepegraph.graph, self.segments = dynamicSegments( usepegraph.graph, usepeconfig, self.segments, deleted_segments=None )
+                d2c2graph.graph, self.segments = dynamicSegments( d2c2graph.graph, d2c2config, self.segments, deleted_segments=None )
 
                 # 2nd: to initialised the population of segments
-                usepestrategic.initialisedUsers()
+                d2c2strategic.initialisedUsers()
 
                 # segments_df = pd.DataFrame.from_dict( self.segments, orient='index' )
                 segments_df = self.segments
@@ -591,8 +589,8 @@ class UsepeSegments( core.Entity ):
                     altf = acrte.wpalt[-1]
 
                     if altf < 0:
-                        mask = usepeflightplans.flight_plan_df_back_up['ac'] == acid
-                        altf = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['destination_alt']
+                        mask = d2c2flightplans.flight_plan_df_back_up['ac'] == acid
+                        altf = d2c2flightplans.flight_plan_df_back_up[mask].iloc[0]['destination_alt']
 
                     orig = [lon0, lat0, alt0 ]
                     dest = [lonf, latf, altf ]
@@ -607,7 +605,7 @@ class UsepeSegments( core.Entity ):
                     if segments_df[cond].empty:
                         segment_name_0 = 'N/A'
                         # origin is not within any segment
-                        usepedronecommands.droneLanding( acid )
+                        d2c2dronecommands.droneLanding( acid )
                         continue
                     else:
                         segment_name_0 = segments_df[cond].index[0]
@@ -620,25 +618,25 @@ class UsepeSegments( core.Entity ):
                     if segments_df[cond].empty:
                         segment_name_f = 'N/A'
                         # origin is not within any segment
-                        usepedronecommands.droneLanding( acid )
+                        d2c2dronecommands.droneLanding( acid )
                         continue
                     else:
                         segment_name_f = segments_df[cond].index[0]
 
                     if ( self.segments['speed_max'][segment_name_0] == 0 ) | ( self.segments['speed_max'][segment_name_f] == 0 ):
                         # origin or destination is not allowed, so the drone lands
-                        usepedronecommands.droneLanding( acid )
+                        d2c2dronecommands.droneLanding( acid )
                         continue
 
-                    rerouting = usepestrategic.updateStrategicDeconflictionDrone( acid, orig, dest )
+                    rerouting = d2c2strategic.updateStrategicDeconflictionDrone( acid, orig, dest )
 
                     if rerouting:
-                        scn = usepedronecommands.rerouteDrone( acid )
+                        scn = d2c2dronecommands.rerouteDrone( acid )
 
                         acrte.wpstack[iactwp] = ['DEL {}'.format( acid ), scn]
 
                 # 4th. To update the flight plans in the queue
-                usepeflightplans.reprocessFlightPlans()
+                d2c2flightplans.reprocessFlightPlans()
 
         self.calcWptDict()
         self.calcRecentPath()
@@ -653,8 +651,8 @@ class UsepeSegments( core.Entity ):
         return
 
 
-class UsepeStrategicDeconfliction( core.Entity ):
-    ''' UsepeStrategicDeconfliction new entity for BlueSky
+class D2C2StrategicDeconfliction( core.Entity ):
+    ''' D2C2StrategicDeconfliction new entity for BlueSky
     This class implements the strategic deconfliction service.
 
      '''
@@ -669,7 +667,7 @@ class UsepeStrategicDeconfliction( core.Entity ):
         super().__init__()
         self.initial_time = initial_time
         self.final_time = final_time
-        self.users = initialPopulation( usepesegments.segments, self.initial_time, self.final_time )
+        self.users = initialPopulation( d2c2segments.segments, self.initial_time, self.final_time )
 
         # TODO: to include more drone purposes (e.g. emergency, etc.)
         self.delivery_drones = 0
@@ -685,7 +683,7 @@ class UsepeStrategicDeconfliction( core.Entity ):
         time = math.floor( sim.simt )
         print( time )
 
-        new_users = initialPopulation( usepesegments.segments, self.initial_time, self.final_time )
+        new_users = initialPopulation( d2c2segments.segments, self.initial_time, self.final_time )
 
         for key in new_users:
             if key in self.users:
@@ -757,17 +755,17 @@ class UsepeStrategicDeconfliction( core.Entity ):
 
         if ac['purpose'] == 'delivery':
             users, route, delayed_time = deconflictedDeliveryPathPlanning( orig, dest, dest, orig,
-                                                                           departure_time, usepegraph.graph,
+                                                                           departure_time, d2c2graph.graph,
                                                                            self.users, self.initial_time,
                                                                            self.final_time,
-                                                                           copy.deepcopy( usepesegments.segments ),
-                                                                           usepeconfig, ac, hovering_time=30,
+                                                                           copy.deepcopy( d2c2segments.segments ),
+                                                                           d2c2config, ac, hovering_time=30,
                                                                            only_rerouting=False )
         elif ac['purpose'] == 'surveillance':
             users, route, delayed_time = deconflictedSurveillancePathPlanning( orig, dest, dest, orig,
-                                            departure_time, usepegraph.graph, self.users,
+                                            departure_time, d2c2graph.graph, self.users,
                                             self.initial_time, self.final_time,
-                                            copy.deepcopy( usepesegments.segments ), usepeconfig,
+                                            copy.deepcopy( d2c2segments.segments ), d2c2config,
                                             ac, only_rerouting=False )
         elif ac['purpose'] == 'ATM':
             users = self.users
@@ -775,17 +773,17 @@ class UsepeStrategicDeconfliction( core.Entity ):
             delayed_time = departure_time
         else:
             users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
-                                                                   usepegraph.graph, self.users,
+                                                                   d2c2graph.graph, self.users,
                                                                    self.initial_time, self.final_time,
-                                                                   copy.deepcopy( usepesegments.segments ),
-                                                                   usepeconfig, ac )
+                                                                   copy.deepcopy( d2c2segments.segments ),
+                                                                   d2c2config, ac )
 
         df_row['delayed_time'] = delayed_time
-        usepeflightplans.route_dict[name] = route
-        usepeflightplans.ac_dict[name] = ac
+        d2c2flightplans.route_dict[name] = route
+        d2c2flightplans.ac_dict[name] = ac
         df_row['ac'] = name
-        usepeflightplans.flight_plan_df_processed = pd.concat( 
-            [usepeflightplans.flight_plan_df_processed, df_row] ).sort_values( by='delayed_time' )
+        d2c2flightplans.flight_plan_df_processed = pd.concat( 
+            [d2c2flightplans.flight_plan_df_processed, df_row] ).sort_values( by='delayed_time' )
 
         self.users = users
 
@@ -807,37 +805,37 @@ class UsepeStrategicDeconfliction( core.Entity ):
 
         name = acid
 
-        ac = usepeflightplans.ac_dict[name]
+        ac = d2c2flightplans.ac_dict[name]
 
         rerouting = True
 
         if ac['purpose'] == 'delivery':
 
-            mask = usepeflightplans.flight_plan_df_back_up['ac'] == acid
+            mask = d2c2flightplans.flight_plan_df_back_up['ac'] == acid
 
-            latf2 = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['origin_lat']
-            lonf2 = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['origin_lon']
-            altf2 = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]['origin_alt']
+            latf2 = d2c2flightplans.flight_plan_df_back_up[mask].iloc[0]['origin_lat']
+            lonf2 = d2c2flightplans.flight_plan_df_back_up[mask].iloc[0]['origin_lon']
+            altf2 = d2c2flightplans.flight_plan_df_back_up[mask].iloc[0]['origin_alt']
 
             dest2 = [lonf2, latf2, altf2 ]
 
             if ( dest[0] == dest2[0] ) and ( dest[1] == dest2[1] ):  #  if delivery drone is already coming back
                 users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
-                                                                       usepegraph.graph, self.users,
+                                                                       d2c2graph.graph, self.users,
                                                                        self.initial_time, self.final_time,
-                                                                       copy.deepcopy( usepesegments.segments ), usepeconfig,
+                                                                       copy.deepcopy( d2c2segments.segments ), d2c2config,
                                                                        ac, only_rerouting=True )
             else:
                 users, route, delayed_time = deconflictedDeliveryPathPlanning( orig, dest, dest, dest2,
-                                                                               departure_time, usepegraph.graph,
+                                                                               departure_time, d2c2graph.graph,
                                                                                self.users, self.initial_time,
                                                                                self.final_time,
-                                                                               copy.deepcopy( usepesegments.segments ),
-                                                                               usepeconfig, ac, hovering_time=30,
+                                                                               copy.deepcopy( d2c2segments.segments ),
+                                                                               d2c2config, ac, hovering_time=30,
                                                                                only_rerouting=True )
         elif ac['purpose'] == 'surveillance':
-            mask = usepeflightplans.flight_plan_df_back_up['ac'] == acid
-            fp_row = usepeflightplans.flight_plan_df_back_up[mask].iloc[0]
+            mask = d2c2flightplans.flight_plan_df_back_up['ac'] == acid
+            fp_row = d2c2flightplans.flight_plan_df_back_up[mask].iloc[0]
 
             latf_leave = fp_row['destination_lat']
             lonf_leave = fp_row['destination_lon']
@@ -853,28 +851,28 @@ class UsepeStrategicDeconfliction( core.Entity ):
 
             if ( dest[0] == dest_return[0] ) and ( dest[1] == dest_return[1] ):
                 users, route, _ = deconflictedPathPlanning( orig, dest, departure_time,
-                                                usepegraph.graph, self.users, self.initial_time,
-                                                self.final_time, copy.deepcopy( usepesegments.segments ),
-                                                usepeconfig, ac, only_rerouting=True )
+                                                d2c2graph.graph, self.users, self.initial_time,
+                                                self.final_time, copy.deepcopy( d2c2segments.segments ),
+                                                d2c2config, ac, only_rerouting=True )
 
             elif ( dest[0] == dest_leave[0] ) and ( dest[1] == dest_leave[1] ):
                 users, route, _ = deconflictedSurveillancePathPlanning( orig, dest, dest,
-                                                dest_return, departure_time, usepegraph.graph,
+                                                dest_return, departure_time, d2c2graph.graph,
                                                 self.users, self.initial_time, self.final_time,
-                                                copy.deepcopy( usepesegments.segments ), usepeconfig, ac,
+                                                copy.deepcopy( d2c2segments.segments ), d2c2config, ac,
                                                 only_rerouting=True, wait_time=fp_row['operation_duration'] )
             else:
                 users = self.users
-                route = usepeflightplans.route_dict[name]
+                route = d2c2flightplans.route_dict[name]
                 rerouting = False
         else:
             users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time,
-                                                                   usepegraph.graph, self.users,
+                                                                   d2c2graph.graph, self.users,
                                                                    self.initial_time, self.final_time,
-                                                                   copy.deepcopy( usepesegments.segments ), usepeconfig,
+                                                                   copy.deepcopy( d2c2segments.segments ), d2c2config,
                                                                    ac, only_rerouting=True )
 
-        usepeflightplans.route_dict[name] = route
+        d2c2flightplans.route_dict[name] = route
 
         self.users = users
 
@@ -890,8 +888,8 @@ class UsepeStrategicDeconfliction( core.Entity ):
         return
 
 
-class UsepePathPlanning( core.Entity ):  # Not used
-    ''' UsepePathPlanning new entity for BlueSky '''
+class D2C2PathPlanning( core.Entity ):  # Not used
+    ''' D2C2PathPlanning new entity for BlueSky '''
 
     def __init__( self ):
         super().__init__()
@@ -906,8 +904,8 @@ class UsepePathPlanning( core.Entity ):  # Not used
         return
 
 
-class UsepeDroneCommands( core.Entity ):
-    ''' UsepeDroneCommands new entity for BlueSky
+class D2C2DroneCommands( core.Entity ):
+    ''' D2C2DroneCommands new entity for BlueSky
     This class is used to transform the route into BlueSky commands
     '''
 
@@ -920,13 +918,13 @@ class UsepeDroneCommands( core.Entity ):
         Inputs:
                 row: row of the flight plan processed dataframe
         """
-        route = usepeflightplans.route_dict[row['ac']]
-        ac = usepeflightplans.ac_dict[row['ac']]
+        route = d2c2flightplans.route_dict[row['ac']]
+        ac = d2c2flightplans.ac_dict[row['ac']]
         # departure_time = str( datetime.timedelta( seconds=row['delayed_time'] ) )
 
         departure_time = str( datetime.timedelta( seconds=0 ) )  # Relative time is considered
-        G = usepegraph.graph
-        layers_dict = usepegraph.layers_dict
+        G = d2c2graph.graph
+        layers_dict = d2c2graph.layers_dict
 
         scenario_name = f'scenario_traffic_drone_{ac["id"]}.scn'
         scenario_path = Path( 'USEPE/temp', scenario_name )
@@ -954,12 +952,12 @@ class UsepeDroneCommands( core.Entity ):
         """
         When the segments are updated, it is used to reroute the flights that have already departed
         """
-        route = usepeflightplans.route_dict[acid]
-        ac = usepeflightplans.ac_dict[acid]
+        route = d2c2flightplans.route_dict[acid]
+        ac = d2c2flightplans.ac_dict[acid]
 
         departure_time = str( datetime.timedelta( seconds=0 ) )  # Relative time is considered
-        G = usepegraph.graph
-        layers_dict = usepegraph.layers_dict
+        G = d2c2graph.graph
+        layers_dict = d2c2graph.layers_dict
 
         scenario_name = f'scenario_traffic_drone_{ac["id"]}.scn'
         scenario_path = Path( 'USEPE/temp', scenario_name )
@@ -991,12 +989,12 @@ class UsepeDroneCommands( core.Entity ):
         """
         It goes over all the processed flight plan that departs in this time step
         """
-        while not usepeflightplans.flight_plan_df_processed[usepeflightplans.flight_plan_df_processed['delayed_time'] <= sim.simt].empty:
-            df_row = usepeflightplans.flight_plan_df_processed.iloc[[0]]
+        while not d2c2flightplans.flight_plan_df_processed[d2c2flightplans.flight_plan_df_processed['delayed_time'] <= sim.simt].empty:
+            df_row = d2c2flightplans.flight_plan_df_processed.iloc[[0]]
             row = df_row.iloc[0]
             self.createDroneCommands( row )
-            usepeflightplans.flight_plan_df_processed = usepeflightplans.flight_plan_df_processed.drop( usepeflightplans.flight_plan_df_processed.index[0] )
-            usepeflightplans.flight_plan_df_back_up = pd.concat( [usepeflightplans.flight_plan_df_back_up, df_row] )
+            d2c2flightplans.flight_plan_df_processed = d2c2flightplans.flight_plan_df_processed.drop( d2c2flightplans.flight_plan_df_processed.index[0] )
+            d2c2flightplans.flight_plan_df_back_up = pd.concat( [d2c2flightplans.flight_plan_df_back_up, df_row] )
 
     def droneLanding( self, acid ):
         print( ' Drone: {} is landing'.format( acid ) )
@@ -1015,8 +1013,8 @@ class UsepeDroneCommands( core.Entity ):
         return
 
 
-class UsepeFlightPlan( core.Entity ):
-    ''' UsepeFlightPlan new entity for BlueSky
+class D2C2FlightPlan( core.Entity ):
+    ''' D2C2FlightPlan new entity for BlueSky
     This class contains all the information of the planned flights
     flight_plan_df: DataFrame with all the information passed to BlueSky
     flight_plan_df_buffer: DataFrame with all the flights that have not been planned yet (simt < planned_time_s)
@@ -1042,8 +1040,8 @@ class UsepeFlightPlan( core.Entity ):
         """
         To process the planned flight plans
         """
-        # segments_df = pd.DataFrame.from_dict( usepesegments.segments, orient='index' )
-        segments_df = usepesegments.segments
+        # segments_df = pd.DataFrame.from_dict( d2c2segments.segments, orient='index' )
+        segments_df = d2c2segments.segments
         while not self.flight_plan_df_buffer[self.flight_plan_df_buffer['planned_time_s'] <= sim.simt].empty:
             df_row = self.flight_plan_df_buffer.iloc[[0]]
             # print( df_row )
@@ -1062,8 +1060,8 @@ class UsepeFlightPlan( core.Entity ):
             # else:
             #     segment_name_0 = segments_df[cond].index[0]
 
-            orig_node = nearestNode3d( usepegraph.graph, lon=orig[0], lat=orig[1], altitude=orig[2] )
-            segment_name_0 = usepegraph.graph.nodes[orig_node]['segment']
+            orig_node = nearestNode3d( d2c2graph.graph, lon=orig[0], lat=orig[1], altitude=orig[2] )
+            segment_name_0 = d2c2graph.graph.nodes[orig_node]['segment']
 
             # We check which is the destination is in a no fly zone
             # cond = ( segments_df['lon_min'] <= dest[0] ) & ( segments_df['lon_max'] > dest[0] ) & \
@@ -1075,23 +1073,23 @@ class UsepeFlightPlan( core.Entity ):
             # else:
             #     segment_name_f = segments_df[cond].index[0]
 
-            dest_node = nearestNode3d( usepegraph.graph, lon=dest[0], lat=dest[1], altitude=dest[2] )
-            segment_name_f = usepegraph.graph.nodes[dest_node]['segment']
+            dest_node = nearestNode3d( d2c2graph.graph, lon=dest[0], lat=dest[1], altitude=dest[2] )
+            segment_name_f = d2c2graph.graph.nodes[dest_node]['segment']
 
-            # print( usepesegments.segments['class'][segment_name_0] )
-            # print( usepesegments.segments['class'][segment_name_f] )
+            # print( d2c2segments.segments['class'][segment_name_0] )
+            # print( d2c2segments.segments['class'][segment_name_f] )
 
             if ( segment_name_0 == 'N/A' ) | ( segment_name_f == 'N/A' ):
                 # origin or destination is not within any segment
                 self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
                 print( 'Origin or destination is not within any segment' )
             else:
-                if ( usepesegments.segments['speed_max'][segment_name_0] == 0 ) | ( usepesegments.segments['speed_max'][segment_name_f] == 0 ):
+                if ( d2c2segments.segments['speed_max'][segment_name_0] == 0 ) | ( d2c2segments.segments['speed_max'][segment_name_f] == 0 ):
                     # origin or destination is not allowed, so the flight plan is rejected
                     self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
                     print( 'Origin or destination is not allowed, so the flight plan is rejected: {} - {}s'.format( row['purpose'], str( sim.simt ) ) )
                 else:
-                    usepestrategic.strategicDeconflictionDrone( df_row )
+                    d2c2strategic.strategicDeconflictionDrone( df_row )
                     self.flight_plan_df_buffer = self.flight_plan_df_buffer.drop( self.flight_plan_df_buffer.index[0] )
 
     def reprocessFlightPlans( self ):
@@ -1104,8 +1102,8 @@ class UsepeFlightPlan( core.Entity ):
         self.flight_plan_df_processed = pd.DataFrame( columns=list( self.flight_plan_df.columns ) +
                                                       ['delayed_time'] + ['ac'] )
 
-        # segments_df = pd.DataFrame.from_dict( usepesegments.segments, orient='index' )
-        segments_df = usepesegments.segments
+        # segments_df = pd.DataFrame.from_dict( d2c2segments.segments, orient='index' )
+        segments_df = d2c2segments.segments
         while not previous_df.empty:
             df_row = previous_df.iloc[[0]]
             print( df_row )
@@ -1124,8 +1122,8 @@ class UsepeFlightPlan( core.Entity ):
             # else:
             #     segment_name_0 = segments_df[cond].index[0]
 
-            orig_node = nearestNode3d( usepegraph.graph, lon=orig[0], lat=orig[1], altitude=orig[2] )
-            segment_name_0 = usepegraph.graph.nodes[orig_node]['segment']
+            orig_node = nearestNode3d( d2c2graph.graph, lon=orig[0], lat=orig[1], altitude=orig[2] )
+            segment_name_0 = d2c2graph.graph.nodes[orig_node]['segment']
 
             # We check which is the destination is in a no fly zone
             # cond = ( segments_df['lon_min'] <= dest[0] ) & ( segments_df['lon_max'] > dest[0] ) & \
@@ -1137,18 +1135,18 @@ class UsepeFlightPlan( core.Entity ):
             # else:
             #     segment_name_f = segments_df[cond].index[0]
 
-            dest_node = nearestNode3d( usepegraph.graph, lon=dest[0], lat=dest[1], altitude=dest[2] )
-            segment_name_f = usepegraph.graph.nodes[dest_node]['segment']
+            dest_node = nearestNode3d( d2c2graph.graph, lon=dest[0], lat=dest[1], altitude=dest[2] )
+            segment_name_f = d2c2graph.graph.nodes[dest_node]['segment']
 
             if ( segment_name_0 == 'N/A' ) | ( segment_name_f == 'N/A' ):
                 # origin or destination is not within any segment
                 previous_df = previous_df.drop( previous_df.index[0] )
             else:
-                if ( usepesegments.segments['speed_max'][segment_name_0] == 0 ) | ( usepesegments.segments['speed_max'][segment_name_f] == 0 ):
+                if ( d2c2segments.segments['speed_max'][segment_name_0] == 0 ) | ( d2c2segments.segments['speed_max'][segment_name_f] == 0 ):
                     # origin or destination is not allowed, so the flight plan is rejected
                     previous_df = previous_df.drop( previous_df.index[0] )
                 else:
-                    usepestrategic.strategicDeconflictionDrone( df_row, new=False )
+                    d2c2strategic.strategicDeconflictionDrone( df_row, new=False )
                     previous_df = previous_df.drop( previous_df.index[0] )
 
 
@@ -1163,8 +1161,8 @@ class UsepeFlightPlan( core.Entity ):
         return
 
 
-class UsepeWind( core.Entity ):
-    ''' UsepeWind new entity for BlueSky
+class D2C2Wind( core.Entity ):
+    ''' D2C2Wind new entity for BlueSky
     This class import the wind data to BlueSky simulation
     '''
 
@@ -1174,7 +1172,7 @@ class UsepeWind( core.Entity ):
         # We call a pre-computed scenario with the wind information. We only consider one wind
         # snapshot for all the simulation, so we do this once
 
-        wind_path = r"{}".format( usepeconfig['BlueSky']['wind_scenario_path'] )
+        wind_path = r"{}".format( d2c2config['BlueSky']['wind_scenario_path'] )
         if wind_path:
             print( "Loading wind in the simulation. File {}".format( wind_path ) )
             stack.stack( 'PCALL {} REL'.format( wind_path ) )
@@ -1192,14 +1190,14 @@ class UsepeWind( core.Entity ):
         return
 
 
-class StateBasedUsepe( ConflictDetection ):
+class StateBasedD2C2( ConflictDetection ):
     def __init__( self ):
         super().__init__()
 
         self.confpairs_default = list()
 
         # read look-up tables
-        lookup_tables_dir = usepeconfig['BlueSky']['lookup_tables_dir']
+        lookup_tables_dir = d2c2config['BlueSky']['lookup_tables_dir']
         self.tables = self.readAllLookUpTables( lookup_tables_dir )
 
         self.table_grid = 10
@@ -1359,7 +1357,7 @@ class StateBasedUsepe( ConflictDetection ):
         # print( 'default' )
         # print( self.confpairs_default )
 
-        if usepeconfig.getboolean( 'BlueSky', 'D2C2' ):
+        if d2c2config.getboolean( 'BlueSky', 'D2C2' ):
 
             for i in range( len( swconfl ) ):
                 for j in range( len( swconfl[i] ) ):
