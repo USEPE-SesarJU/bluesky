@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
-"""
-A module for importing and processing the building heights from gml file
-"""
+"""A module for importing and processing the building heights from gml files."""
+
 import os
 import statistics
 
@@ -19,12 +18,13 @@ __copyright__ = '(c) Nommon 2021'
 
 def gmlFiles( directory ):
     """
-    Create a list with all the paths for the gml files
+    Create a list with all the paths for the gml files.
 
     Args:
-             directory (string): directory where the gml files are stored
+        directory (string): path to directory where the gml files are stored
+        
     Returns:
-            gml_files (list): list with all the paths for the gml files
+        gml_files (list): list with all the paths for the gml files
     """
     gml_files = []
     for file in os.listdir( directory ):
@@ -36,14 +36,15 @@ def gmlFiles( directory ):
 
 def footprintListOfLists( lst ):
     """
-    Create a list with the footprint information. Each element is a list with x and y coordinates
-    of the building footprint
+    Create a list with the footprint information.
+    
+    Each element is a list with x and y coordinates of the building footprint.
 
     Args:
-            lst (list): list with the coordinates
+        lst (list): list with the coordinates
 
     Returns:
-            footprint (list): list of lists containing the x and y coordinates of the building footprint
+        footprint (list): list of lists containing the x and y coordinates of the building footprint
     """
     x_coord = lst[0::3]
     y_coord = lst[1::3]
@@ -57,9 +58,7 @@ def footprintListOfLists( lst ):
 
 
 def removeDuplicatesList( lst ):
-    """
-    Remove the duplicated items of a list
-    """
+    """Remove the duplicated items of a list."""
     # 1. Convert into list of tuples
     tpls = [tuple( x ) for x in lst]
     # 2. Create dictionary with empty values and
@@ -73,14 +72,15 @@ def removeDuplicatesList( lst ):
 
 def readSector( path ):
     """
-    This function read a gml file and create a dictionary with the information of buildings. The
-    keys are the building id and the value is another dictionary with some parameters of the building.
+    Read a gml file and create a dictionary with the information of buildings.
+    
+    For each element the key is the building id and the value is another dictionary with some parameters of the building.
 
     Args:
-            path (string): path of the gml file
+        path (string): path of the gml file
 
     Returns:
-            my_dict (dictionary): dictionary with the information of buildings
+        my_dict (dictionary): dictionary with the information of buildings
     """
     tree = ET.parse( path )
     root = tree.getroot()
@@ -159,12 +159,14 @@ def readSector( path ):
 
 def centroidnp( footprint ):
     """
-    Compute the centroid of the building footprint
+    Compute the centroid of the building footprint.
+
     Args:
-            footprint (list)
+        footprint (list): coordinates marking the footprint of the building
+    
     Return:
-            x coordinate (float)
-            y coordinate (float)
+        x coordinate (float): x coordinate of the centroid
+        y coordinate (float): y coordinate of the centroid
     """
     x_polygon = []
     y_polygon = []
@@ -179,12 +181,13 @@ def centroidnp( footprint ):
 
 def addCentroid2Dict( building_dict ):
     """
-    Add the centroid to the dictionary with the building information
+    Add the centroid to the dictionary with the building information.
 
     Args:
-            building_dict (dictionary): dictionary containing the information of all the buildings
+        building_dict (dictionary): dictionary containing the information of all the buildings
+    
     Returns:
-            building_dict (dictionary): dictionary containing the information of all the buildings
+        building_dict (dictionary): dictionary containing the information of all the buildings
     """
     building_df = pd.DataFrame.from_dict( building_dict, orient='index' )
     building_df['centroid'] = building_df['footprint'].apply( lambda footprint:
@@ -202,12 +205,13 @@ def addCentroid2Dict( building_dict ):
 
 def readCity( directory ):
     """
-    Create a dictionary with the information of all the buildings included in the gml files
+    Create a dictionary with the information of all the buildings included in the gml files.
 
     Args:
-            directory (string): directory where the gml files are stored
+        directory (string): path to directory where the gml files are stored
+
     Returns:
-            building_dict (dictionary): dictionary containing the information of all the buildings
+        building_dict (dictionary): dictionary containing the information of all the buildings
     """
 
     gml_files = gmlFiles( directory )
