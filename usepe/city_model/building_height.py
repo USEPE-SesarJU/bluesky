@@ -74,7 +74,8 @@ def readSector( path ):
     """
     Read a gml file and create a dictionary with the information of buildings.
     
-    For each element the key is the building id and the value is another dictionary with some parameters of the building.
+    For each element the key is the building id and the value is another dictionary with some
+    parameters of the building.
 
     Args:
         path (string): path of the gml file

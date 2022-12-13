@@ -22,7 +22,8 @@ def cityGraph( config ):
     """
     Create a 3D graph of a city based on the parameters of the configuration file.
 
-    In the graph, amongst the buildings, the edges represents streets and the nodes represents intersections.
+    In the graph, amongst the buildings, the edges represents streets and the nodes represents
+    intersections.
 
     Args:
         config (configuration file): A configuration file with all the relevant information
