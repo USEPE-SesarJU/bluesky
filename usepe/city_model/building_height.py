@@ -213,7 +213,6 @@ def readCity( directory ):
     Returns:
         building_dict (dictionary): dictionary containing the information of all the buildings
     """
-
     gml_files = gmlFiles( directory )
 
     building_dict = {}
