@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
-"""
-"""
+"""Definition of high-speed corridors, which are then connected to the larger city graph."""
 
 import csv
 import json
@@ -19,21 +18,23 @@ __copyright__ = '(c) Nommon 2021'
 
 def entryNodes( G, segments, node, name, speed, next_node, config ):
     """
-    This function creates the acceleration lanes for the entry points of the corridors
-    Input:
-        G - graph
-        segments - segments of the graph
-        node - corridor node that will be an entrance
-        name - for naming the segment ?
-        speed - corridor speed
-        next_node - next corridor node in the direction of the entrance
-        config - configparser.ConfigParser() object that reads the configuration file
-            acceleration_lengh - length of the acceleration lane
-            n_layers - number of layers of the city grid
-            layer_width - width of each layer of the city grid
-    Output:
-        G
-        segments
+    Create the acceleration lanes for the entry points of the corridors.
+
+    Args:
+        G (graph): graph representing the city
+        segments (DataFrame): segments of the city
+        node (string): corridor node that will be an entry point
+        name (string): name of the corridor which is inherited by its segment
+        speed (int): corridor speed
+        next_node (string): next corridor node in the direction of the entrance
+        config (ConfigParser): the configuration file
+            acceleration_length: length of the acceleration lane
+            number_of_layers: number of layers of the city grid
+            layer_width: width of each layer of the city grid
+    
+    Returns:
+        G (graph): graph representing the city
+        segments (DataFrame): segments of the city
     """
 
     # Get longitude and latitude for the acceleration entry point
@@ -113,20 +114,22 @@ def entryNodes( G, segments, node, name, speed, next_node, config ):
 
 def corridorCreation( G, segments, corridor_coordinates, altitude, speed, capacity, name, config ):
     '''
-    This function creates a corridor as defined by its coordinates
-    and adds entry points for the corridor
-    Input:
-        G - graph
-        segments - graph segments
-        corridor_coordinates - coordinates that define the shape of the corridor
-        altitude - altitude of the corridor
-        speed - speed defined for the corridor
-        capacity - capacity of the corridor
-        name - name of the corridor
-        config - configparser.ConfigParser() object that reads the configuration file
-    Output:
-        G - graph updated with the corridors
-        segments - segments updated with the corridors
+    Create a corridor as defined by its coordinates and add entry points for the corridor.
+
+    Args:
+        G (graph): graph representing the city
+        segments (DataFrame): segments of the city
+        corridor_coordinates (tuple): coordinates that define the shape of the corridor,
+            each a list [longitude, latitude]
+        altitude (int): altitude of the corridor
+        speed (int): speed defined for the corridor
+        capacity (int): capacity of the corridor
+        name (string): name of the corridor
+        config (ConfigParser): the configuration file
+    
+    Returns:
+        G (graph): graph updated with the corridors
+        segments (DataFrame): segments updated with the corridors
     '''
 
     # segments = defineSegment( segments, 0, 0, 0, 0, 0, 0, speed, capacity, name )
@@ -179,11 +182,15 @@ def corridorCreation( G, segments, corridor_coordinates, altitude, speed, capaci
 
 def str2intList( string ):
     '''
-    This function transforms a string containing digits and other characters into a list of integers
-    Input:
-        string: any string, e.g., '1, 2, 40,,w'
-    Output:
-        list: list with the integers contained in the string, e.g., ['1', '2', '40']
+    Transform a string containing digits and other characters into a list of integers.
+
+    Any digit to be returned must be separated from other characters by whitespace.
+
+    Args:
+        string (string): any string, e.g., '1 , 2 , 40 ,,w'
+    
+    Returns:
+        int_list (list): the integers contained in the string, e.g., ['1', '2', '40']
     '''
     int_list = []
     for s in string.split():
@@ -194,12 +201,14 @@ def str2intList( string ):
 
 def getCorridorCoordinates( corridor, file_path ):
     '''
-    This function gets coordinates stored in a json or csv file
-    Input:
-        file_path: path to the file storing the coordinates and the corridors associated
-        corridor: number (csv) or name (geojson) of the corridor required
-    Output:
-        coordinates: a tuple containing lists of [longitude, latitude] for
+    Get coordinates stored in a json or csv file.
+
+    Args:
+        corridor (string): id (number) of the corridor required
+        file_path (string): path to the file storing the coordinates and the corridors associated
+    
+    Returns:
+        coordinates (tuple): a tuple containing lists of [longitude, latitude] for
             the points defining the corridor
     '''
     _, file_extension = os.path.splitext( file_path )
@@ -229,15 +238,17 @@ def getCorridorCoordinates( corridor, file_path ):
 
 def corridorLoad( G, segments, config ):
     '''
-    This function reads the parameters from the configuration file and executes the corridor
-    creation function for all the active corridors defined in the configuration file
-    Input:
-        G - graph
-        segments
-        config - configparser.ConfigParser() object that reads the configuration file
-    Outputs:
-        G
-        segments
+    Read the parameters from the configuration file and execute the corridor creation function
+    for all the active corridors defined in the configuration file.
+
+    Args:
+        G (graph): graph representing the city
+        segments (DataFrame): segments of the city
+        config (ConfigParser): the configuration file
+    
+    Returns:
+        G (graph): graph updated with the corridors
+        segments (DataFrame): segments updated with the corridors
     '''
     # reads the list of active corridors defined in the settings file
     active_corridors = str2intList( config['Corridors']['corridors'] )
