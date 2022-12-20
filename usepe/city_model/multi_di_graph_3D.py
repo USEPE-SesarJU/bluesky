@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
-"""
-We create a class to define a MultiDiGrpah 3D. We add several useful methods
-"""
+"""A class to define a 3-Dimensional MultiDiGraph. Including several useful methods."""
 
 import string
 
@@ -18,12 +16,32 @@ __copyright__ = '(c) Nommon 2021'
 
 class MultiDiGrpah3D ( MultiDiGraph ):
     """
-    A class to transform a graph into a 3-dimensional graph
+    A class to transform a graph into a 3-dimensional graph.
+
+    Public Methods:
+        defGroundAltitude()
+        addLayer(layer, layer_width)
+        addDiagonalEdges(sectors, config)
+        defOneWay(config)
+        simplifyGraph(config)
+        distanceNearestNode(G, node_lon, node_lat )
     """
+
     def __init__( self, G_copy=None, **attr ):
+        """Initialise as a regular MultiDiGraph."""
         MultiDiGraph.__init__( self, G_copy, **attr )
 
     def addNodeAltitude( self, name, y_node, x_node, alttude_node, segment_node=None ):
+        """
+        Add a node at a given altitude.
+
+        Args:
+            name (string): name of the node, includes the name of the layer
+            y_node (float): latitude of the node
+            x_node (float): longitude of the node
+            alttude_node (integer): altitude of the node
+            segment_node (string): name of the segment of the node
+        """
         if segment_node:
             self.add_node( name, y=y_node, x=x_node, z=alttude_node, segment=segment_node )
         else:
@@ -31,34 +49,33 @@ class MultiDiGrpah3D ( MultiDiGraph ):
 
     def filterNodes( self, nodes, layer ):
         """
-        Filter the nodes to consider only those belonging to a layer
+        Filter the nodes to consider only those belonging to a layer.
 
         Args:
-                nodes (list): a list on nodes
-                layer (string): string indicating the layer
+            nodes (list): nodes
+            layer (string): name of the layer
+        
         Returns:
-                nodes_filtered (list): filtered nodes
+            nodes_filtered (list): filtered nodes
         """
         nodes_filtered = filter( lambda node: str( node )[0] == layer, nodes )
         return list( nodes_filtered )
 
     def defGroundAltitude( self ):
-        """
-        Define a ground altitude for all the nodes
-        """
+        """Define a ground altitude for all the nodes."""
         for n in self:
             self.add_node( n, z=0 )
 
     def addLayer( self, layer, layer_width ):
         """
         Add a layer in the graph. It can be the first layer or an additional layer.
-        The layer are coded as letters: A, B, C, D,.... A is the lower layer and the rest are in
+
+        The layers are coded as letters: A, B, C, D,.... A is the lowest layer and the rest are in
         alphabetic order.
 
         Args:
-                layer (string): string indicating the layer that will be created
-                layer_width (integer): integer representing the altitude difference between two
-                                       consecutive layers.
+            layer (string): layer that will be created
+            layer_width (integer): altitude difference between two consecutive layers.
         """
         increment_altitude = layer_width
 
@@ -134,13 +151,15 @@ class MultiDiGrpah3D ( MultiDiGraph ):
 
     def addDiagonalEdges( self, sectors, config ):
         """
-        Create edges in the graph to allow the movement above buildings. These edges connect the
-        sector corners and they are created in all the layers above the limit altitude of the
-        sector (the limit altitude is defined as the altitude of the tallest building in the sector
+        Create edges in the graph to allow the movement above buildings.
+
+        These edges connect the sector corners and they are created in all the layers above the
+        limit altitude of the sector (the limit altitude is defined as the altitude of the
+        tallest building in the sector).
 
         Args:
-                sectors (dataframe): dataframe cointaining all the information about the sectors
-                config (configuration file): configuration file containing all the relevant parameters
+            sectors (DataFrame): information about the sectors
+            config (ConfigParser): relevant parameters
         """
         print( 'Creating diagonal edges...' )
         G = self.copy()
@@ -272,13 +291,13 @@ class MultiDiGrpah3D ( MultiDiGraph ):
     def defOneWay( self, config ):
         """
         Transform the graph to consider one way edges.
+
         Drone can fly from west to east in the layers: A, C, E,...
         Drone can fly from east to west in the layers: B, D, F,...
 
         Args:
-                config (configuration file): configuration file with the relevant parameters
+            config (ConfigParser): relevant parameters
         """
-
         letters = list( string.ascii_uppercase )
         total_layers = letters[0:config['Layers'].getint( 'number_of_layers' )]
         layers_w2e = total_layers[0::2]
@@ -300,6 +319,16 @@ class MultiDiGrpah3D ( MultiDiGraph ):
                         self.remove_edge( node, elem, 0 )
 
     def simplifyGraph( self, config ):
+        """
+        Simplify the graph by reducing the number of nodes.
+
+        If several nodes are aligned and the middle nodes do not connect to other separate nodes,
+        remove the middle nodes and connect the nodes at each end of the line.
+        If several nodes are within a certain distance of eachother, merge them into 1 node.
+
+        Args:
+            config (ConfigParser): relevant parameters
+        """
         from usepe.city_model.utils import shortest_dist_to_point
         print( "Simplifying the graph..." )
         print( "Removing nodes from the straight lines..." )
@@ -384,11 +413,12 @@ class MultiDiGrpah3D ( MultiDiGraph ):
         Find the nearest node to a node and compute the distance.
 
         Args:
-                G (graph): graph
-                node_lon (float): longitude of the node
-                node_lat (float): latitude of the node
+            G (graph): graph
+            node_lon (float): longitude of the node
+            node_lat (float): latitude of the node
+        
         Returns:
-                (float): distance in meters
+            (float): distance in meters
         """
         node = ox.distance.nearest_nodes( G, X=node_lon, Y=node_lat )
         return ox.distance.great_circle_vec( node_lat, node_lon, self.nodes[node]['y'],
