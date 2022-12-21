@@ -1609,7 +1609,7 @@ def drawBuildings( config, scenario_path_base, time='00:00:00.00' ):
     Each scenario prints the footprints of 10000 buildings.
 
     Args:
-        config (ConfigParser):  Configuration file
+        config (ConfigParser): Configuration file
         scenario_path_base (string): Base filepath for the scenarios
         time (string): The time to execute the drawing commands
 
