@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
-"""
-Additional functions
-"""
+"""Additional functions."""
 import copy
 import math
 import string
@@ -20,13 +18,14 @@ __copyright__ = '(c) Nommon 2021'
 
 def read_my_graphml( filepath ):
     """
-    Read a previously computed graph
-    Args:
-            filepath (string): string representing the path where the graph is stored
-    Returns:
-            G (graph): graph stored at the filepath
-    """
+    Read a previously computed graph.
 
+    Args:
+        filepath (string): Filepath where the graph is stored
+    
+    Returns:
+        G (graph): Graph stored at the filepath
+    """
     default_node_dtypes = {
         "elevation": float,
         "elevation_res": float,
@@ -65,11 +64,13 @@ def read_my_graphml( filepath ):
 
 def layersDict( config ):
     """
-    Create a dictionary with the information about the altitude of each layer
+    Create a dictionary with the information about the altitude of each layer.
+
     Args:
-            config (configuration file): A configuration file with all the relevant information
+        config (ConfigParser): A configuration file with all the relevant information
+    
     Returns:
-            layers_dict (dict): dictionary with keys=layers values=altitude [m]
+        layers_dict (dict): Dictionary with keys=layers values=altitude [m]
     """
     letters = list( string.ascii_uppercase )
     total_layers = letters[0:config['Layers'].getint( 'number_of_layers' )]
@@ -84,18 +85,17 @@ def layersDict( config ):
 
 def nearestNode3d( G, lon, lat, altitude, exclude_corridor=True ):
     '''
-    This function gets the closest node of the city graph nodes with respect
-    to a given reference point (lat, lon, alt)
+    Get the closest of the city graph nodes with respect to a given reference point (lat, lon, alt).
 
-    Input:
-        G - graph
-        lon - longitude of the reference point
-        lat - latitude of the reference point
-        altitude - altitude of the reference point
+    Args:
+        G (graph): Graph of the area simulated
+        lon (float): Longitude of the reference point
+        lat (float): Latitude of the reference point
+        altitude (float): Altitude of the reference point
+        exclude_corridors (boolean): True if nodes in corridors should be ignored
 
-    Output:
-        nearest_node - closest node of the city graph nodes with respect to the reference point
-        distance - distance between the nearest node and the reference point (lat, lon, alt)
+    Returns:
+        nearest_node (string): Closest node to the reference point
     '''
     # The nodes are filtered to exclude corridor nodes
     nodes = list( G.nodes )
@@ -126,7 +126,17 @@ def nearestNode3d( G, lon, lat, altitude, exclude_corridor=True ):
 
 def checkIfNoFlyZone( lat, lon, alt, G, segments ):
     '''
-    This function checks if the point or its nearest node is within a no-fly zone
+    This function checks if the point or its nearest node is within a no-fly zone.
+
+    Args:
+        lat (float): Longitude of the point
+        lon (float): Latitude of the point
+        alt (float): Altitude of the point
+        G (graph): Graph of the area simulated
+        segments (dictionary): Information about the segments
+
+    Returns:
+        True/False indicating if the point is within a no-fly zone
     '''
     if type( segments ) == dict:
         # Get closed segments
@@ -176,19 +186,19 @@ def checkIfNoFlyZone( lat, lon, alt, G, segments ):
 
 def shortest_dist_to_point( x1, y1, x2, y2, x, y ):
     '''
-    This function gets the shortest distance from a point (x,y) to a line defined by two points:
+    Get the shortest distance from a point (x,y) to a line defined by two points:
     (x1,y1) and (x2,y2)
 
-    Input:
-        x1 (float): x coordinate
-        y1 (float): y coordinate
-        x2 (float): x coordinate
-        y2 (float): y coordinate
-        x (float): x coordinate
-        y (float): y coordinate
+    Args:
+        x1 (float): x coordinate of one end of the line
+        y1 (float): y coordinate of one end of the line
+        x2 (float): x coordinate of the other end of the line
+        y2 (float): y coordinate of the other end of the line
+        x (float): x coordinate of the point
+        y (float): y coordinate of the point
 
-    Output:
-        shortest distance from a point (x,y) to a line
+    Returns:
+        shortest distance from the point (x,y) to the line
     '''
     dx = x2 - x1
     dy = y2 - y1
@@ -211,17 +221,18 @@ def shortest_dist_to_point( x1, y1, x2, y2, x, y ):
 
 def wpt_bsc2wpt_graph( wpt_route_bsc, wpt_route_graph ):
     '''
-    This function relates the name of the wpts in BlueSky with the names of the
-    waypoints in the graph for a given aircraft
+    This function relates the name of the waypoints in BlueSky with the names of the
+    waypoints in the graph for a given aircraft.
 
-    wpt_route_bsc - list with waypoints names as bluesky loads them
-    wpt_route_graph - list of waypoints forming the route of the drone in the graph
-                        if it is a delivery drone, it will include two lists: go and back
+    Args:
+        wpt_route_bsc (list): Waypoint names as BlueSky loads them
+        wpt_route_graph (list): Waypoints forming the route of the drone in the graph
+            if it is a delivery drone, it will include two lists: there and back
 
-    wpt_bsc2graph_dict - dictionary relating the names of the waypoints in bsk (keys)
-                        with the names in the graph (values)
+    Returns:
+        wpt_dict (dictionary): Dictionary relating the names of the waypoints in
+            BlueSky (keys) with the names in the graph (values)
     '''
-
     if type( wpt_route_graph[0] ) is list:
         # Delivery case
         for route in wpt_route_graph:
@@ -242,6 +253,7 @@ def wpt_bsc2wpt_graph( wpt_route_bsc, wpt_route_graph ):
     return wpt_dict
 
 def cleanRoute( wpt_route_graph ):
+    """Remove duplicate waypoints from a list."""
     wpt_route_graph_clean = copy.deepcopy( wpt_route_graph )
 
     for wpt_graph in wpt_route_graph[1:]:
@@ -253,6 +265,8 @@ def cleanRoute( wpt_route_graph ):
     return wpt_route_graph_clean
 
 def createDictWpt( wpt_route_bsc, wpt_route_graph_clean ):
+    """Create a dictionary where the keys are names of waypoints in BlueSky, and the values are
+    the names from a graph."""
     wpt_dict = {}
     for wpt_bsc, wpt_graph in zip( wpt_route_bsc, wpt_route_graph_clean ):
         wpt_dict[wpt_bsc] = wpt_graph
