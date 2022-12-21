@@ -1,8 +1,15 @@
 #!/usr/bin/python
 
 """
+A number of functions for defining all the aspects of a flight before takeoff.
 
+This enables the creation of flight plans as CSV files given either specific departure times or a
+desired traffic density + the average flight time of the drones.
+
+This also covers the translation of the flight route as waypoints into scenario instructions used
+by BlueSky, stored in a .scn file.
 """
+
 from io import TextIOWrapper
 from pathlib import Path
 import configparser
@@ -33,19 +40,19 @@ __copyright__ = '(c) Nommon 2021'
 
 def headingIncrement( actual_heading, wpt1, wpt2, G ):
     """
-    Compute the heading from waypoint 1 (wpt1) to waypoint 2 (wpt2). In addition, it returns the
-    heading increment between the new heading and the actual heading.
+    Compute the heading from waypoint 1 (wpt1) to waypoint 2 (wpt2).
+    
+    In addition, it returns the heading increment between the new heading and the actual heading.
 
     Args:
-            actual_heading (float): drone heading
-            wpt1 (string): string indicating the waypoint the drone is heading to
-            wpt2 (string) string indicating the next waypoint
-            G (graph)
+        actual_heading (float): Drone heading
+        wpt1 (string): Waypoint the drone is heading to
+        wpt2 (string): The following waypoint
+        G (graph): Graph of the area simulated
 
     Returns:
-            new_heading (float): float indicating the new heading
-            increment (float): float indicating the difference between the new heading and the
-            actual heading
+        new_heading (float): The new heading
+        increment (float): The difference between the new heading and the actual heading
     """
     y = G.nodes[wpt2]['y'] - G.nodes[wpt1]['y']
     x = G.nodes[wpt2]['x'] - G.nodes[wpt1]['x']
@@ -62,16 +69,16 @@ def headingIncrement( actual_heading, wpt1, wpt2, G ):
 
 def calcDistAccel( speed_t0, speed_tf, ac ):
     """
-    Compute the distance used to decelerate or accelerate
+    Compute the distance used to decelerate or accelerate.
 
     Args:
-            speed_t0 (float): initial speed [m/s]
-            speed_tf (float): final speed [m/s]
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max}
+        speed_t0 (float): Initial speed [m/s]
+        speed_tf (float): Final speed [m/s]
+        ac (dictionary): Aircraft parameters {id, type, accel, v_max, vs_max, ...}
 
     Returns:
-            dist (float): distance [m]
-            time (float): time needed to decelerate or accelerate [s]
+        dist (float): Distance needed to decelerate or accelerate  [m]
+        time (float): Time needed to decelerate or accelerate [s]
     """
     time = abs( speed_tf - speed_t0 ) / ac['accel']
     if speed_t0 > speed_tf:
@@ -84,19 +91,20 @@ def calcDistAccel( speed_t0, speed_tf, ac ):
 
 def turnDefinition( increment, ac, speed, climbing=None ):
     """
-    Compute some parameters needed to control the change of direction of the drone. It returns the
-    turn speed, the turn distance and turn radius.
+    Compute some parameters needed to control the change of direction of the drone.
+    
+    It returns the turn speed, the turn distance and turn radius.
 
     Args:
-            increment (float): float indicating the change of heading
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max}
-            speed (float): drone's speed before the turn [m/s]
+        increment (float): The change of heading
+        ac (dictionary): Aircraft parameters {id, type, accel, v_max, vs_max, ...}
+        speed (float): Drone's speed before the turn [m/s]
+        climbing (boolean): True if next waypoint is at another altitude
 
     Returns:
-            turn_speed (float or None): indicating the velocity when performing the turn
-            turn_dist (float or None): indicating the distance at which the drone has to start to
-            decelerate [nm]
-            turn_rad (float or None): indicating the turn radius
+        turn_speed (float or None): The velocity when performing the turn
+        turn_dist (float or None): The distance at which the drone has to start to decelerate [nm]
+        turn_rad (float or None): The turn radius
     """
     m2nm = 0.000539957
     m_s2knot = 1.944  # m/s to knots
@@ -163,16 +171,17 @@ def turnDefinition( increment, ac, speed, climbing=None ):
 
 def turnDetectionV2( route_parameters, i ):
     """
-    The condition of deceleration may overlap between two waypoints. This function update the turning
-    information to take the most restrictive condition. In addition, it returns a variable indicating
-    which command has to be written.
+    Update the turning information, when the condition of deceleration overlaps between two
+    waypoints, to take the most restrictive condition.
+    
+    In addition, it returns a variable indicating which command has to be written.
 
     Args:
-            route_parameters (dictionary): dictionary with all the information about the route
-            i (integer): integer indicating the node of the route list
+        route_parameters (dictionary): Information about the route
+        i (integer): Index of the node in the route list
 
     Returns:
-            option (integer): variable indicating which commands have to be imposed
+        option (integer): Variable indicating which commands have to be imposed
     """
     total_dist = 0
     maximum_turn_distance = 0.05
@@ -210,18 +219,18 @@ def turnDetectionV2( route_parameters, i ):
 
 def routeParameters( G, route, ac ):
     """
-    Compute all the information about the route (e.g. turn distance, turn speed, altitude, etc.). It
-    is stored as a dictionary.
+    Compute all the information about the route (e.g. turn distance, turn speed, altitude, etc.).
+    
+    It is stored as a dictionary.
 
     Args:
-            G (grah)
-            route (list): list of waypoints
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max}
+        G (graph): Graph of the area simulated
+        route (list): Waypoints of the route
+        ac (dictionary): Aircraft parameters {id, type, accel, v_max, vs_max, ...}
 
     Returns:
-            route_parameters (dictionary): dictionary with all the information about the route
+        route_parameters (dictionary): Information about the route
     """
-
     points_to_check_speed_reduction = 5
     speed_reduction = len( route ) > points_to_check_speed_reduction
     distance_speed_reduction = 125  # m
@@ -315,24 +324,25 @@ def routeParameters( G, route, ac ):
 
 def createInstructionV3( scenario_file, route_parameters, i, ac, G, layers_dict, time, state ):
     """
-    Write the commands associated to the waypoint i in the scenario file. It also returns the
-    variable "state" with information about the state of the drone once it has done the commands for
-    the waypoint i.
+    Write the commands associated with the waypoint 'i' to the scenario file.
+    
+    It also returns the variable "state" with information about the state of the drone once it
+    has executed the commands for the waypoint 'i'.
 
     Args:
-            scenario_file: text file where we write the commands
-            route_parameters (dictionary): dictionary with all the information about the route
-            i (integer): integer indicating the node of the route list
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max}
-            G (graph)
-            layers_dict (dictionary): dictionary with the information about layers and altitudes
-            time (string): time for the instructions
-            state (dictionary): information about the state of the drone before doing the
-            commands for the waypoint i
+        scenario_file (object): Text file object for writing the commands
+        route_parameters (dictionary): Information about the route
+        i (integer): Index of the node in the route list
+        ac (dictionary): Aircraft parameters {id, type, accel, v_max, vs_max, ...}
+        G (graph): Graph of the area simulated
+        layers_dict (dictionary): Information about layers and altitudes
+        time (string): Time for sending the instructions
+        state (dictionary): Information about the state of the drone before executing the
+            commands for the waypoint 'i'
 
     Returns:
-            state (dictionary): information about the state of the drone once it has done the
-            commands for the waypoint i
+        state (dictionary): Information about the state of the drone once it has executed the
+            commands for the waypoint 'i'
     """
     wpt1 = route_parameters[str( i )]['name']
     wpt2 = route_parameters[str( i + 1 )]['name']
@@ -856,16 +866,17 @@ def createInstructionV3( scenario_file, route_parameters, i, ac, G, layers_dict,
 
 def createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file ):
     """
-    Create a flight plan for a drone. All the commands are written in a text file.
+    Create a flight plan for a standard drone operation (point-to-point).
+    
+    All the commands are written in a text file.
 
     Args:
-            route (list): list of all waypoints of the route
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max}
-            departure_time (string): string indicating the departure time
-            G (graph)
-            layers_dict (dictionary): dictionary with the information about layers and altitudes
-            scenario_file (object): text file object where the commands are written
-
+        route (list): Waypoints of the route
+        ac (dictionary): Aircraft parameters {id, type, accel, v_max, vs_max, ...}
+        departure_time (string): The departure time
+        G (graph): Graph of the area simulated
+        layers_dict (dictionary): Information about layers and altitudes
+        scenario_file (object): Text file object where the commands are written
     """
     print( 'Creating flight plan of {0}...'.format( ac['id'] ) )
     state = {}
@@ -896,19 +907,20 @@ def createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file )
 def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict, scenario_file,
                               scenario_path, hovering_time=30 ):
     """
-    Create a flight plan for a drone. All the commands are written in a text file.
+    Create a flight plan for a delivery drone operation (including hovering at delivery point).
+    
+    All the commands are written in a text file.
 
     Args:
-            route1 (list): list of all waypoints of the route to the delivery point
-            route2 (list): list of all waypoints of the return route
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max}
-            departure_time (string): string indicating the departure time
-            G (graph)
-            layers_dict (dictionary): dictionary with the information about layers and altitudes
-            scenario_file (object): text file object where the commands are written
-            scenario_path (string): string indicating the path of the delivery scenario
-            hovering_time (integer): number of seconds the parcel takes to be delivered
-
+        route1 (list): Waypoints of the route to the delivery point
+        route2 (list): Waypoints of the return route
+        ac (dictionary): Aircraft parameters {id, type, accel, v_max, vs_max, ...}
+        departure_time (string): The departure time
+        G (graph): Graph of the area simulated
+        layers_dict (dictionary): Information about layers and altitudes
+        scenario_file (object): Text file object where the commands are written
+        scenario_path (string): The filepath to the delivery scenario
+        hovering_time (integer): Number of seconds the parcel takes to be delivered
     """
     print( 'Creating delivery flight plan of {0}...'.format( ac['id'] ) )
     return_path = scenario_path.with_name( scenario_path.stem + '_return.scn' )
@@ -989,21 +1001,22 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
     scenario_file_return.close()
 
 
-def createSurveillanceFlightPlan( route1, ac, departure_time, G: MultiDiGrpah3D, layers_dict,
-                                 scenario_file: TextIOWrapper, scenario_path: Path, premade_scenario_path ):
+def createSurveillanceFlightPlan( route1, ac, departure_time, G, layers_dict,
+                                 scenario_file: TextIOWrapper, scenario_path, premade_scenario_path ):
     """
-    Create a flight plan for a surveillance drone. All the commands are written in a text file.
+    Create a flight plan for a surveillance drone operation.
+    
+    All the commands are written in a text file.
 
     Args:
-        - route1 (list): Waypoins of the route to the operation area
-        - route2 (list): Waypoins of the return route
-        - ac (dictionary): Aircraft parameters {id, type, accel, v_max, vs_max, safety_volume_size, purpose}
-        - departure_time (string): The departure time
-        - G (graph): Graph of the area simulated
-        - layers_dict (dictionary): Information about layers and altitudes
-        - scenario_file (object): Text file object where the commands are written
-        - scenario_path (Path): The path to the surveillance scenario
-        - premade_scenario_path (Path): The path to the premade surveillance operation scenario
+        route1 (list): Waypoints of the route to the operation area
+        ac (dictionary): Aircraft parameters {id, type, accel, v_max, vs_max, ...}
+        departure_time (string): The departure time
+        G (graph): Graph of the area simulated
+        layers_dict (dictionary): Information about layers and altitudes
+        scenario_file (object): Text file object where the commands are written
+        scenario_path (Path): The filepath to the surveillance scenario
+        premade_scenario_path (Path): The filepath to the premade surveillance operation scenario
     """
     print( f'Creating surveillance flight plan for {ac["id"]}...' )
 
@@ -1022,16 +1035,17 @@ def createSurveillanceFlightPlan( route1, ac, departure_time, G: MultiDiGrpah3D,
 def automaticFlightPlan( total_drones, base_name, G, layers_dict, scenario_general_path_base ):
     """
     Automatically create flight plans for a number of drones. It creates a scenario for each drone.
+
     In addition, it creates a general scenario that can be used to simulate all drone at the same
     time.
 
     Args:
-            total_drones (integer): number of drones
-            base_name (string): string indicating the base name of all drones (e.g. base_name = 'U',
-                    drones are U1, U2,...
-            G (graph)
-            layers_dict (dictionary): dictionary with the information about layers and altitudes
-            scenario_general_path_base (string): base path for the scenarios.
+        total_drones (integer): Number of drones
+        base_name (string): The base name of all drones
+            (e.g. base_name = 'U', drones are U1, U2,...)
+        G (graph): Graph of the area simulated
+        layers_dict (dictionary): Information about layers and altitudes
+        scenario_general_path_base (string): Base filepath for the scenarios
     """
     # General scenario that calls all drone scenarios
     scenario_general_path = scenario_general_path_base + '.scn'
@@ -1085,6 +1099,7 @@ def addFlightData( orig_lat, orig_lon, orig_alt,
                   data,
                   operation_id=None,
                   operation_duration=None ):
+    """Add the data for 1 flight to the flight plan."""
     if departure_time_seconds < 36000:
             departure_time = '0{}'.format( str( datetime.timedelta( seconds=departure_time_seconds ) ) )
     else:
@@ -1108,18 +1123,19 @@ def addFlightData( orig_lat, orig_lon, orig_alt,
 
 def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G, segments, config, default_path, data=None):
     '''
-    This function creates distributed origins and destinations for the background traffic in
-    the city area defined in the configuration file
+    Create distributed origins and destinations for the background traffic in the city area
+    defined in the configuration file.
 
-    Input:
-        density - density desired
-        avg_flight_duration - duration of the flights in average
-        simulation time - duration of the simulation (seconds)
-        G - city graph
-        segments -
-        config - configuration object
+    Args:
+        density (float): Density desired
+        avg_flight_duration (integer): Average duration of the flights [s]
+        simulation time (integer): Duration of the simulation [s]
+        G (graph): Graph of the area simulated
+        segments (DataFrame): Segment information
+        config (ConfigParser): Configuration file
+    
     Output:
-        csv file
+        Flight plan (.csv)
     '''
     if data is None:
         # Data to be included in the CSV file
@@ -1227,6 +1243,20 @@ def createBackgroundTrafficCSV( density, avg_flight_duration, simulation_time, G
 
 
 def createDeliveryDrone( orig, dest, departure_time, frequency, uncertainty, distributed, simulation_time, data ):  # Add uncertainty / distribute
+    """
+    Create the flight data of the delivery drone(s) doing 1 specific delivery.
+
+    Args:
+        orig (tuple): Coordinates for the origin of the drone(s)
+        dest (tuple): Coordinates for the deatination of the drone(s)
+        departure_time (integer): Departure time of the (first) drone
+        frequency (integer | None): Duration between each departure, None for a single flight
+        uncertainty (integer | None): Uncertainty of departure time
+        distributed (boolean): True to distribute the flight(s) randomly 
+            in the range (departure_time, simulation_time)
+        simulation_time (integer): Duration of the simulation
+        data (dictionary): Flight plan data for all the flights being planned
+    """
     ( orig_lat, orig_lon, orig_alt ) = orig
     ( dest_lat, dest_lon, dest_alt ) = dest
 
@@ -1265,22 +1295,22 @@ def createDeliveryDrone( orig, dest, departure_time, frequency, uncertainty, dis
 
 def createDeliveryCSV(departure_times, frequencies, uncertainties, distributed, simulation_time, data=None):
     '''
-    This function creates the csv containing the data of the delivery drones
+    Create the CSV containing the flight data of the delivery drones.
 
-    Input:
-        departure_times - list with 3 values []
-                        - times must be integers (seconds)
-                        - None for the drones that do not take part in the simulation
-        frequencies - list with 3 values []
-                    - None for the drones that only fly once
-        uncertainties - list with 3 values []
-                      - None for no uncertainty
-        distributed - True to distribute the flights randomly in the range (departure, simulation_time)
-                    - False
-        simulation time - duration of the simulation (seconds)
+    Args:
+        departure_times (list): Departure times [s] for the 3 delivery routes, must be integers 
+            None for the drones that do not take part in the simulation
+        frequencies (list): Frequency of departure from each of the 3 delivery routes
+            None for the drones that only fly once
+        uncertainties (list): Uncertainty for each of the 3 delivery routes
+            None for no uncertainty
+        distributed (boolean): True to distribute the flights randomly
+            in the range (departure_time, simulation_time)
+        simulation time (integer): Duration of the simulation (seconds)
+        data (dictionary): Flight plan data for all the flights being planned
 
     Output:
-        csv
+        Flight plan (.csv)
     '''
     if data is None:
         # Data to be included in the CSV file
@@ -1336,31 +1366,23 @@ def createDeliveryCSV(departure_times, frequencies, uncertainties, distributed, 
 
 def createSurveillanceCSV(origins, destinations, departure_times, drone_models, operation_ids, operation_durations, simulation_time, data=None):
     """
-    This function creates the csv with the flight plan data of surveillance drones.
+    Create the CSV with the flight plan data of the surveillance drones.
 
     Args:
-        - origins:              Origin information, type: list,
-                                1 tuple per drone containing latitude, longitude and altitude
-                                (lat, lon, alt), type: float
-        - destinations:         Destination information, type: list,
-                                1 tuple per drone containing latitude, longitude and altitude
-                                (lat, lon, alt), type: float
-        - departure_times:      Departure times in seconds, type: list,
-                                1 integer per drone.
-        - drone_models:         Drone models, type: list,
-                                1 string per drone.
-        - operation_ids:        Operation IDs, type: list,
-                                1 string per drone.
-        - operation_durations:  Operation durations in seconds, type: list
-                                1 integer per drone
-        - simulation_time:      Duration of simulation in seconds, type: int
+        origins (list): Coordinates of all the origins, 1 tuple per drone (lat, lon, alt)
+        destinations (list): Coordinates of all the destinations, 1 tuple per drone (lat, lon, alt)
+        departure_times (list): Departure times in seconds, integers
+        drone_models (list): Drone models
+        operation_ids (list): Operation IDs
+        operation_durations (list): Operation durations in seconds, integers
+        simulation_time (integer): Duration of simulation in seconds
+        data (dictionary): Flight plan data for all the flights being planned
 
         All lists must be equal length.
 
     Output:
-        - Flight plan (.csv)
+        Flight plan (.csv)
     """
-
     # Verify all lists are equal length
     if not( len( origins ) == len( destinations ) == len( departure_times ) == len( drone_models ) ):
         raise ValueError( 'All lists provided must be of equal length.' )
@@ -1397,18 +1419,16 @@ def createSurveillanceCSV(origins, destinations, departure_times, drone_models, 
 
 def planSurveillanceDrone(orig, dest, departure_time, drone_model, operation_id, operation_duration, data):
     """
-    This function takes information on the flight of 1 surveillance drone and adds a planning time.
+    Take information on the flight of 1 surveillance drone and add a planning time.
 
     Args:
-        - orig:               Origin information, type: tuple
-                              (latitude, longitude, altitude), type: float
-        - dest:               Destination information, type: tuple
-                              (latitude, longitude, altitude), type: float
-        - departure_time:     Departure time in seconds, type: int
-        - drone_model:        Drone model, type: string
-        - operation_id:       Operation ID, type: string
-        - operation_duration: Operation duration in seconds, type: int
-        - data:               Stores all the flight plans, type: dict
+        orig (tuple): Coordinates of the origin, (latitude, longitude, altitude)
+        dest (tuple): Coordinates of the destination, (latitude, longitude, altitude)
+        departure_time (integer): Departure time in seconds
+        drone_model (string): Drone model
+        operation_id (string): Operation ID
+        operation_duration (integer): Operation duration in seconds
+        data (dictionary): Flight plan data for all the flights being planned
     """
     (orig_lat, orig_lon, orig_alt) = orig
     (dest_lat, dest_lon, dest_alt) = dest
@@ -1429,17 +1449,18 @@ def planSurveillanceDrone(orig, dest, departure_time, drone_model, operation_id,
 
 def createATMcsv(origins, departure_times, aircraft_models, operation_ids, data=None):
     """
-    This function creates the csv with the flight plan data for ATM flights.
+    Create the CSV with the flight plan data for ATM flights.
 
     Args:
-        - origins [list]:
-        - departure_times [list]:
-        - aircraft_models [list]:
+        origins (list): Coordinates of all the origins, 1 tuple per flight (lat, lon, alt)
+        departure_times (list): Departure times in seconds, as integers
+        aircraft_models (list): Aircraft models
+        operation_ids (list): Operation IDs
+        data (dictionary): Flight plan data for all the flights being planned
 
     Output:
-        - Flight plan (.csv)
+        Flight plan (.csv)
     """
-
     # Verify all lists are equal length
     if not(len(origins) == len(departure_times) == len(aircraft_models) == len(operation_ids)):
         raise ValueError( 'All lists provided must be of equal length.' )
@@ -1473,15 +1494,15 @@ def createATMcsv(origins, departure_times, aircraft_models, operation_ids, data=
 
 def planATMaircraft(orig, departure_time, aircraft_model, operation_id, data):
     """
-    This function takes information on the flight of 1 ATM aircraft and adds a planning time.
+    Take information on the flight of 1 ATM aircraft and add a planning time.
 
     Args:
-        - orig [tuple]:
-        - departure_time [int]:
-        - aircraft_model [string]:
-        - data [dict]:
+        orig (tuple): Coordinates of the origin, (latitude, longitude, altitude)
+        departure_time (integer): Departure time in seconds
+        aircraft_model (string): Aircraft model
+        operation_id (string): Operation ID
+        data (dictionary): Flight plan data for all the flights being planned
     """
-
     (orig_lat, orig_lon, orig_alt) = orig
 
     # Flight plan must be submitted 20-30 min before departure, but for simulations we disregard this
@@ -1499,23 +1520,21 @@ def planATMaircraft(orig, departure_time, aircraft_model, operation_id, data):
 
 def createScenarioCSV(file_name, nPlans, background_traffic=None, delivery=None, surveillance=None, atm=None):
     '''
-    This function creates distributed origins and destinations for the background traffic in
-    the city area defined in the configuration file and for the delivery drones defined by the user
+    Create the CSV with the combined flight plan data of several kinds of flights.
 
-    Input:
-        density - density desired
-        avg_flight_duration - duration of the flights in average
-        departure_times - list with 3 values []
-                        - times must be integers (seconds)
-                        - None for the drones that do not take part in the simulation
-        frequencies - list with 3 values []
-                    - None fro the drones that only fly once
-        simulation time - duration of the simulation (seconds)
-        config - configuration object
+    This supports delivery, surveillance, and ATM flights,
+    as well as background (point-to-point) traffic
+
+    Args:
+        file_name (string): Base name of the .csv files
+        nPlans (integer): Number of flight plans to create
+        background_traffic (dictionary): All the necessary data, as per the specific CSV creator
+        delivery (dictionary): All the necessary data, as per the specific CSV creator
+        surveillance (dictionary): All the necessary data, as per the specific CSV creator
+        atm (dictionary): All the necessary data, as per the specific CSV creator
 
     Output:
-        background csv file
-        delivery csv file
+        Combined flight plan (.csv)
     '''
 
     for plan in range(1, nPlans + 1):
@@ -1584,13 +1603,18 @@ def createScenarioCSV(file_name, nPlans, background_traffic=None, delivery=None,
 
 def drawBuildings( config, scenario_path_base, time='00:00:00.00' ):
     """
-    Creates the scenarios to represent the buildings in BlueSky. First, it loads the building data.
-    Then creates several BlueSky scenarios. Each scenario prints the footprints of 10000 buildings.
+    Create the scenarios to represent the buildings in BlueSky.
+    
+    First, it loads the building data. Then creates several BlueSky scenarios.
+    Each scenario prints the footprints of 10000 buildings.
 
     Args:
-            config (configuration file): configuration file with all the relevant information
-            scenario_path_base (string): base path for the scenarios.
-            time (string): string indicating the time. Default value: '00:00:00.00'
+        config (ConfigParser):  Configuration file
+        scenario_path_base (string): Base filepath for the scenarios
+        time (string): The time to execute the drawing commands
+
+    Output:
+        Scenario files (.scn) for drawing the buildings
     """
     directory = config['BuildingData']['directory_hannover']
     building_dict = readCity( directory )
@@ -1637,10 +1661,7 @@ def drawBuildings( config, scenario_path_base, time='00:00:00.00' ):
     scenario_file.close()
 
 def createFlightPlansFromCSV( default_path, path_csv, strategic_deconfliction, G, segments, config ):
-    '''
-    This function reads the data stored in a csv file and creates the flight plans accordingly
-    '''
-
+    '''Read the data stored in a CSV file and create scenario files for each drone accordingly'''
     # Open csv
     data_frame = pd.read_csv( path_csv )
 
