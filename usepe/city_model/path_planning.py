@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
-"""
-A module to compute an optimal route from origin to destination
-"""
+"""A module to compute an optimal route from origin to destination."""
+
 from networkx.algorithms.shortest_paths.weighted import single_source_dijkstra
 
 from usepe.city_model.utils import nearestNode3d
@@ -17,16 +16,20 @@ __copyright__ = '(c) Nommon 2021'
 
 def trajectoryCalculation( G, orig, dest ):
     """
-    Calculate a optimal trajectory between two points. It computes the nearest nodes to both point
-    and the optimal trajectory is computed based on some parameter. The default parameter is
-    weight = "travel_time", but we can use weigth = "length".
+    Calculate an optimal trajectory between two points.
+    
+    It computes the nearest node to each point and the optimal trajectory is computed based on
+    some parameter. The default parameter is weight = "travel_time",
+    but we can use weigth = "length".
+
     Args:
-            G (graph): a graph representing the city
-            orig (list): with the coordinates of the origin point [longitude, latitude]
-            dest (list): with the coordinates of the destination point [longitude, latitude]
+        G (graph): a graph representing the city
+        orig (list): the coordinates of the origin point [longitude, latitude]
+        dest (list): the coordinates of the destination point [longitude, latitude]
+    
     Returns:
-            weight (float): float indicating the value of the objetive function
-            route (list): list containing the waypoints of the optimal route.
+        weight (float): the value of the objective function
+        route (list): the waypoints of the optimal route.
     """
     print( 'Calculating the route...' )
     # Origin
@@ -56,10 +59,14 @@ def trajectoryCalculation( G, orig, dest ):
 
 def printRoute( G, route ):
     """
-    Print the route
+    Print the route.
+
     Args:
-            G (graph): a graph representing the city
-            route (list): list containing the waypoints of the optimal route.
+        G (graph): a graph representing the city
+        route (list): the waypoints of the optimal route.
+
+    Returns:
+        fig, ax (tuple): matplotlib figure and axis
     """
     print( 'Printing the route...' )
     print( route )
