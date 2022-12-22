@@ -180,20 +180,6 @@ class MultiDiGrpah3D ( MultiDiGraph ):
             node3 = ox.distance.nearest_nodes( G, X=point3_x, Y=point3_y )
             node4 = ox.distance.nearest_nodes( G, X=point4_x, Y=point4_y )
 
-            # Nodes in the middle of the edges
-#             node12 = ox.distance.nearest_nodes( self, X=( point1_x + point2_x ) / 2,
-#                                                 Y=( point1_y + point2_y ) / 2 )
-#             node23 = ox.distance.nearest_nodes( self, X=( point2_x + point3_x ) / 2,
-#                                                 Y=( point2_y + point3_y ) / 2 )
-#             node34 = ox.distance.nearest_nodes( self, X=( point3_x + point4_x ) / 2,
-#                                                 Y=( point3_y + point4_y ) / 2 )
-#             node41 = ox.distance.nearest_nodes( self, X=( point4_x + point1_x ) / 2,
-#                                                 Y=( point4_y + point1_y ) / 2 )
-#             node1234 = ox.distance.nearest_nodes( self, X=( point1_x + point2_x + point3_x +
-#                                                             point4_x ) / 4,
-#                                                             Y=( point1_y + point2_y +
-#                                                                 point3_y + point4_y ) / 4 )
-
             y1 = self.nodes[node1]['y']
             x1 = self.nodes[node1]['x']
             y2 = self.nodes[node2]['y']
@@ -202,17 +188,6 @@ class MultiDiGrpah3D ( MultiDiGraph ):
             x3 = self.nodes[node3]['x']
             y4 = self.nodes[node4]['y']
             x4 = self.nodes[node4]['x']
-
-#             y12 = self.nodes[node12]['y']
-#             x12 = self.nodes[node12]['x']
-#             y23 = self.nodes[node23]['y']
-#             x23 = self.nodes[node23]['x']
-#             y34 = self.nodes[node34]['y']
-#             x34 = self.nodes[node34]['x']
-#             y41 = self.nodes[node41]['y']
-#             x41 = self.nodes[node41]['x']
-#             y1234 = self.nodes[node1234]['y']
-#             x1234 = self.nodes[node1234]['x']
 
             # Compute in which layers we have to add the edges
             altitude = config['Layers'].getint( 'number_of_layers' ) * \
@@ -227,19 +202,6 @@ class MultiDiGrpah3D ( MultiDiGraph ):
                     layers.append( total_layers[-1] )
 
                 altitude -= config['Layers'].getint( 'layer_width' )
-
-#             xx_orig = ( x1, x12, x2, x23, x3, x34, x4, x41,
-#                         x1, x2, x3, x4, x12, x23, x34, x41 )
-#             xx_dest = ( x12, x2, x23, x3, x34, x4, x41, x1, x1234,
-#                         x1234, x1234, x1234, x1234, x1234, x1234 )
-#             yy_orig = ( y1, y12, y2, y23, y3, y34, y4, y41,
-#                         y1, y2, y3, y4, y12, y23, y34, y41 )
-#             yy_dest = ( y12, y2, y23, y3, y34, y4, y41, y1, y1234,
-#                         y1234, y1234, y1234, y1234, y1234, y1234 )
-#             node_orig = ( node1, node12, node2, node23, node3, node34, node4, node41, node1,
-#                             node2, node3, node4, node12, node23, node34, node41 )
-#             node_dest = ( node12, node2, node23, node3, node34, node4, node41, node1, node1234,
-#                           node1234, node1234, node1234, node1234, node1234, node1234 )
 
             xx_orig = ( x1, x2, x3, x4, x1, x2 )
             xx_dest = ( x2, x3, x4, x1, x3, x4 )
@@ -272,8 +234,6 @@ class MultiDiGrpah3D ( MultiDiGraph ):
                     for i in range( control_points - 1 ):
                         name1 = nodes_edge[i]
                         name2 = nodes_edge[i + 1]
-#                         print( name1 )
-#                         print( name2 )
 
                         self.add_edge( name1, name2, 0, oneway=False,
                                        segment='new', speed=50.0,

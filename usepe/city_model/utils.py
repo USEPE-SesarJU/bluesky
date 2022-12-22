@@ -180,7 +180,6 @@ def checkIfNoFlyZone( lat, lon, alt, G, segments ):
             if speed == 0:
                 return True
         else:
-            # print("Skipping node with segment '" +G.nodes[nearest_node]['segment'] + "'!")
             return True
         return False
 

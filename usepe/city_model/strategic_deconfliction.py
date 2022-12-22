@@ -325,7 +325,6 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
         delayed_time (integer): Number of seconds the flight is delayed with respect to the
             desired departure time
     """
-    # avg_flight_time = 20 * 60
 
     delayed_time = time
     opt_travel_time, route = trajectoryCalculation( G, orig, dest )
@@ -344,7 +343,6 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
 
     if overpopulated_segment:
         print( 'Drone {} needs to be strategically deconflicted'.format( ac['id'] ) )
-    # print( 'Overpopulated segments time', tm.time() - start, 's' )
 
     segments_step = segments.copy()
     G_step = G.copy()
@@ -366,9 +364,6 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
 
             G_step, segments_step = dynamicSegments( G_step, None, segments_step )
 
-        # b, route = trajectoryCalculation( G_step, orig, dest )
-        # print( b )
-
         travel_time, route = trajectoryCalculation( G_step, orig, dest )
         route_parameters = routeParameters( G_step, route, ac )
 
@@ -377,13 +372,7 @@ def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_ti
             overpopulated_segment = True
             segments_step = segments.copy()
             G_step = G.copy()
-            # G_step, segments = dynamicSegments( G_step, None, segments )
-            # G_step, segments_step = dynamicSegments( G_step, None, segments_step )
-            # a, route = trajectoryCalculation( G, orig, dest )
-            # print( a )
-            # b, route = trajectoryCalculation( G_step, orig, dest )
-            # print( b )
-            # print( a / b )
+
             print( 'The flight is delayed {0} seconds'.format( delayed_time - time ) )
         else:
             users_step, segments_updated = droneAirspaceUsage( G_step, route, delayed_time, users, initial_time,

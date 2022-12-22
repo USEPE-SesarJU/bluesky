@@ -403,27 +403,3 @@ def dynamicSegments( G, config, segments=None, deleted_segments=None ):
 
 if __name__ == '__main__':
     pass
-    # filepath = "./data/hannover.graphml"
-    #
-    # from utils import read_my_graphml
-    # from multi_di_graph_3D import MultiDiGrpah3D
-    #
-    # G = read_my_graphml( filepath )
-    # G = MultiDiGrpah3D( G )
-    # segments = divideAirspaceSegments( 0, 20, 50, 54, 0, 250, 4, 4, 2 )
-    # G = assignSegmet2Edge( G, segments )
-    # G = updateSegmentVelocity( G, segments )
-    # edges = ox.graph_to_gdfs( G, nodes=False )
-    # print( edges['segment'] )
-    # print( edges.columns )
-    # print( edges['speed'] )
-    # print( segments['segment_1_2_0'] )
-    # G = addTravelTimes( G )
-    #
-    # from usepe.city_model.path_planning import trajectoryCalculation
-    # orig = ( 9.74 , 52.36 )
-    # dest = ( 9.78 , 53.38 )
-    # print( trajectoryCalculation( G, orig, dest ) )
-
-
-

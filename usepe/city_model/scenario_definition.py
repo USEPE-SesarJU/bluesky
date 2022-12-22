@@ -33,7 +33,6 @@ import osmnx as ox
 import pandas as pd
 
 
-# from usepe.city_model.strategic_deconfliction import initialPopulation, deconflcitedScenario
 __author__ = 'jbueno'
 __copyright__ = '(c) Nommon 2021'
 
@@ -152,23 +151,6 @@ def turnDefinition( increment, ac, speed, climbing=None ):
     return turn_speed, turn_dist, turn_rad
 
 
-# # DEPRECIATED
-# def turnDetection( route, i, dist, G, scenario_commands ):
-#     m2nm = 0.000539957
-#     dist_step = 0
-#     j = i - 1
-#     while ( j >= 0 ) & ( dist_step < dist ):
-#         dist_step = ox.distance.great_circle_vec( G.nodes[route[i]]['y'], G.nodes[route[i]]['x'],
-#                                                   G.nodes[route[j]]['y'], G.nodes[route[j]]['x'] )
-#         dist_step = dist_step * m2nm
-#         if dist_step < dist:
-#             scenario_commands[route[j]]['additional'] = ''
-#
-#         j -= 1
-#
-#     return scenario_commands
-
-
 def turnDetectionV2( route_parameters, i ):
     """
     Update the turning information, when the condition of deceleration overlaps between two
@@ -189,7 +171,6 @@ def turnDetectionV2( route_parameters, i ):
     j = i + 1
     option = 1
     while ( total_dist < maximum_turn_distance ) & ( str( j ) in route_parameters ):
-#         total_dist += route_parameters[str( j - 1 )]['dist'] * m2nm
         total_dist = ox.distance.great_circle_vec( route_parameters[str( i )]['lat'],
                                                    route_parameters[str( i )]['lon'],
                                                    route_parameters[str( j )]['lat'],
@@ -581,288 +562,6 @@ def createInstructionV3( scenario_file, route_parameters, i, ac, G, layers_dict,
         state['heading'] = 0
         return state
 
-# DEPRECIATED
-# def createInstructionV2( scenario_file, route_parameters, i, ac, G, layers_dict, time, state ):
-#     wpt1 = route_parameters[str( i )]['name']
-#     wpt2 = route_parameters[str( i + 1 )]['name']
-#     m_s2knot = 1.944
-#     m2ft = 3.281
-#     m_s2ft_min = 197
-#
-#     if state['action'] is None:
-#         new_line0 = '{0} > DEFWPT {1},{2},{3}'.format(
-#             time, wpt1, route_parameters[str( i )]['lat'], route_parameters[str( i )]['lon'] )
-#
-#         if wpt1[0] == wpt2[0]:
-#             hdg = route_parameters[str( i )]['hdg']
-#             new_line1 = '{0} > CRE {1} M600 {2} {3} {4} {5}'.format(
-#                 time, ac, wpt1, hdg, route_parameters[str( i )]['alt'] * m2ft,
-#                 str( G.edges[( wpt1, wpt2, 0 )]['speed'] * m_s2knot ) )
-#
-#             state['action'] = 'cruise'
-#             state['heading'] = hdg
-#
-#             scenario_file.write( new_line0 + '\n' + new_line1 + '\n' )
-#         else:
-#             new_line1 = '{0} > CRE {1} M600 {2} 0 {3} 0'.format(
-#                 time, ac, wpt1, route_parameters[str( i )]['alt'] * m2ft )
-#             new_line2 = '{0} > ADDWPT {1} {2}, , {3}'.format(
-#                 time, ac, wpt1, str( route_parameters[str( i )]['speed'] * m_s2knot ) )
-#             new_line3 = '{0} > ALT {1} {2}'.format( time, ac,
-#                                                     route_parameters[str( i + 1 )]['alt'] * m2ft )
-#             new_line4 = '{0} > VS {1} {2}'.format(
-#                 time, ac, str( route_parameters[str( i )]['speed'] * m_s2ft_min ) )
-#             state['ref_wpt'] = wpt1
-#             state['action'] = 'climbing'
-#             state['heading'] = 0
-#
-#             scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' +
-#                                  new_line3 + '\n' + new_line4 + '\n' )
-#
-#         return state
-#
-#     if wpt1[0] == wpt2[0]:
-#         new_line0 = '{0} > DEFWPT {1},{2},{3}'.format(
-#             time, wpt1, route_parameters[str( i )]['lat'], route_parameters[str( i )]['lon'] )
-#         if state['action'] == 'cruise':
-#             turn_speed = route_parameters[str( i )]['turn speed']
-#             turn_dist = route_parameters[str( i )]['turn dist']
-#             turn_rad = route_parameters[str( i )]['turn rad']
-#             if turn_speed is None:
-#                 new_line1 = '{0} > ADDWPT {1} FLYOVER'.format( time, ac )
-#                 new_line2 = '{0} > ADDWPT {1} {2}, , {3}'.format(
-#                     time, ac, wpt1, str( route_parameters[str( i )]['speed'] * m_s2knot ) )
-#
-#                 scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' )
-#
-#             else:
-#                 new_line1 = '{0} > ADDWPT {1} FLYTURN'.format( time, ac )
-#                 new_line2 = '{0} > ADDWPT {1} TURNSPD {2}'.format( time, ac, turn_speed )
-#                 new_line3 = '{0} > ADDWPT {1} TURNRAD {2}'.format( time, ac, turn_rad )
-#                 new_line4 = '{0} > ADDWPT {1} {2}, , {3}'.format(
-#                     time, ac, wpt1, str( route_parameters[str( i )]['speed'] * m_s2knot ) )
-#                 option = turnDetectionV2( route_parameters, i )
-#                 if option == 1:
-#                     new_line5 = '{0} > {1} ATDIST {2} {3} SPD {4} {5}'.format(
-#                         time, ac, wpt1, turn_dist, ac, turn_speed )
-#                     new_line6 = '{0} > {1} AT {2} DO LNAV {3} ON'.format(
-#                         time, ac, wpt1, ac )
-#                     new_line7 = '{0} > {1} AT {2} DO VNAV {3} ON'.format(
-#                         time, ac, wpt1, ac )
-#
-#                     scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' +
-#                                          new_line3 + '\n' + new_line4 + '\n' + new_line5 + '\n' +
-#                                          new_line6 + '\n' + new_line7 + '\n' )
-#                 elif option == 2:
-#                     new_line5 = '{0} > {1} ATDIST {2} {3} SPD {4} {5}'.format(
-#                         time, ac, wpt1, turn_dist, ac, turn_speed )
-#
-#                     scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' +
-#                                          new_line3 + '\n' + new_line4 + '\n' + new_line5 + '\n' )
-#                 elif option == 3:
-#
-#                     scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' +
-#                                          new_line3 + '\n' + new_line4 + '\n' )
-#
-#         elif state['action'] == 'climbing':
-#             new_line1 = '{0} > {1} AT {2} DO {3} ATALT {4}, LNAV {5} ON'.format(
-#                 time, ac, state['ref_wpt'], ac, route_parameters[str( i )]['alt'] * m2ft, ac )
-#             new_line2 = '{0} > {1} AT {2} DO {3} ATALT {4}, VNAV {5} ON'.format(
-#                 time, ac, state['ref_wpt'], ac, route_parameters[str( i )]['alt'] * m2ft, ac )
-#             new_line3 = '{0} > {1} AT {2} DO {3} ATALT {4}, ADDWPT {5} {6}, {7}, {8}, {9}'.format(
-#                 time, ac, state['ref_wpt'], ac, route_parameters[str( i )]['alt'] * m2ft, ac, wpt1,
-#                 route_parameters[str( i )]['alt'] * m2ft,
-#                 str( route_parameters[str( i )]['speed'] * m_s2knot ), state['ref_wpt'] )
-#
-#             scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' +
-#                                  new_line3 + '\n' )
-#
-#         state['action'] = 'cruise'
-#         state['heading'] = route_parameters[str( i )]['hdg']
-#         return state
-#
-#     elif wpt1[0] != wpt2[0]:
-#         new_line0 = '{0} > DEFWPT {1},{2},{3}'.format(
-#             time, wpt1, route_parameters[str( i )]['lat'], route_parameters[str( i )]['lon'] )
-#         if state['action'] == 'cruise':
-#             new_line1 = '{0} > ADDWPT {1} FLYOVER'.format( time, ac )
-#             new_line2 = '{0} > ADDWPT {1} {2}, ,{3}'.format(
-#                 time, ac, wpt1, str( route_parameters[str( i )]['speed'] * m_s2knot ) )
-#             new_line3 = '{0} > {1} ATDIST {2} {3} SPD {4} {5}'.format(
-#                 time, ac, wpt1, 0.015, ac, 5 )
-#             new_line4 = '{0} > {1} AT {2} DO SPD {3} 0'.format(
-#                 time, ac, wpt1, ac )
-#             new_line5 = '{0} > {1} AT {2} DO ALT {3} {4}'.format(
-#                 time, ac, wpt1, ac, route_parameters[str( i + 1 )]['alt'] * m2ft )
-#             new_line6 = '{0} > {1} AT {2} DO VS {3} {4}'.format(
-#                 time, ac, wpt1, ac, str( route_parameters[str( i )]['speed'] * m_s2ft_min ) )
-#
-#             scenario_file.write( new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' +
-#                                  new_line3 + '\n' + new_line4 + '\n' + new_line5 + '\n' +
-#                                  new_line6 + '\n' )
-#
-#             state['ref_wpt'] = wpt1
-#
-#         elif state['action'] == 'climbing':
-#             new_line0 = '{0} > {1} AT {2} DO {3} ATALT {4}, ALT {5} {6}'.format(
-#                 time, ac, state['ref_wpt'], ac, route_parameters[str( i )]['alt'] * m2ft, ac,
-#                 route_parameters[str( i + 1 )]['alt'] * m2ft )
-#             new_line1 = '{0} > {1} AT {2} DO {3} ATALT {4}, VS {5} {6}'.format(
-#                 time, ac, state['ref_wpt'], ac, route_parameters[str( i )]['alt'] * m2ft, ac,
-#                 str( route_parameters[str( i )]['speed'] * m_s2ft_min ) )
-#
-#             scenario_file.write( new_line0 + '\n' + new_line1 + '\n' )
-#
-#         state['action'] = 'climbing'
-#         state['heading'] = 0
-#         return state
-
-# DEPRECIATED
-# def createInstruction( scenario_commands, route, i, ac, G, layers_dict, time, state ):
-#     wpt1 = route[i]
-#     wpt2 = route[i + 1]
-#     m_s2knot = 1.944
-#     m2ft = 3.281
-#     m_s2ft_min = 197
-#
-#     if state['action'] is None:
-#         new_line0 = '{0} > DEFWPT {1},{2},{3}'.format(
-#             time, wpt1, G.nodes[wpt1]['y'], G.nodes[wpt1]['x'] )
-# #         new_line1 = '{0} > DEFWPT {1},{2},{3}'.format(
-# #             time, wpt2, G.nodes[wpt2]['y'], G.nodes[wpt2]['x'] )
-#         if wpt1[0] == wpt2[0]:
-#             hdg, increment = headingIncrement( 0, wpt1, wpt2, G )
-#             new_line1 = '{0} > CRE {1} M600 {2} {3} {4} {5}'.format(
-#                 time, ac, wpt1, hdg, layers_dict[wpt1[0]] * m2ft,
-#                 str( G.edges[( wpt1, wpt2, 0 )]['speed'] * m_s2knot ) )
-# #             new_line3 = '{0} > ADDWPT {1} {2}, , {3}'.format( time, ac, wpt2 )
-# #             new_line4 = '{0} > SPD {1} {2}'.format(
-# #                 time, ac, str( G.edges[( wpt1, wpt2, 0 )]['speed'] * m_s2knot ) )
-#             state['action'] = 'cruise'
-#             state['heading'] = hdg
-#             aux = {}
-#             aux['standard'] = new_line0 + '\n' + new_line1 + '\n'
-#             aux['additional1'] = ''
-#             aux['additional2'] = ''
-#             scenario_commands[wpt1] = aux
-#         else:
-#             new_line1 = '{0} > CRE {1} M600 {2} 0 {3} 0'.format(
-#                 time, ac, wpt1, layers_dict[wpt1[0]] * m2ft )
-#             new_line2 = '{0} > ADDWPT {1} {2}, , {3}'.format(
-#                 time, ac, wpt1, str( G.edges[( wpt1, wpt2, 0 )]['speed'] * m_s2knot ) )
-#             new_line3 = '{0} > ALT {1} {2}'.format( time, ac, layers_dict[wpt2[0]] * m2ft )
-#             new_line4 = '{0} > VS {1} {2}'.format(
-#                 time, ac, str( G.edges[( wpt1, wpt2, 0 )]['speed'] * m_s2ft_min ) )
-#             state['ref_wpt'] = wpt1
-#             state['action'] = 'climbing'
-#             state['heading'] = 0
-#
-#             aux = {}
-#             aux['standard'] = new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' + \
-#                 new_line3 + '\n' + new_line4 + '\n'
-#             aux['additional1'] = ''
-#             aux['additional2'] = ''
-#             scenario_commands[wpt1] = aux
-#
-#         return state, scenario_commands
-#
-#     if wpt1[0] == wpt2[0]:
-#         new_heading, increment = headingIncrement( state['heading'], wpt1, wpt2, G )
-#         new_line0 = '{0} > DEFWPT {1},{2},{3}'.format(
-#             time, wpt1, G.nodes[wpt1]['y'], G.nodes[wpt1]['x'] )
-#         if state['action'] == 'cruise':
-#             turn_speed, turn_dist, turn_rad = turnDefinition( increment )
-#             if turn_speed is None:
-#                 new_line1 = '{0} > ADDWPT {1} FLYOVER'.format( time, ac )
-#                 new_line2 = '{0} > ADDWPT {1} {2}, , {3}'.format(
-#                     time, ac, wpt1, str( G.edges[( wpt1, wpt2, 0 )]['speed'] * m_s2knot ) )
-#
-#                 aux = {}
-#                 aux['standard'] = new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n'
-#                 aux['additional1'] = ''
-#                 aux['additional2'] = ''
-#                 scenario_commands[wpt1] = aux
-#
-#             else:
-#                 new_line1 = '{0} > ADDWPT {1} FLYTURN'.format( time, ac )
-#                 new_line2 = '{0} > ADDWPT {1} TURNSPD {2}'.format( time, ac, turn_speed )
-#                 new_line3 = '{0} > ADDWPT {1} TURNRAD {2}'.format( time, ac, turn_rad )
-#                 new_line4 = '{0} > ADDWPT {1} {2}, , {3}'.format(
-#                     time, ac, wpt1, str( G.edges[( wpt1, wpt2, 0 )]['speed'] * m_s2knot ) )
-#                 new_line5 = '{0} > {1} ATDIST {2} {3} SPD {4} {5}'.format(
-#                     time, ac, wpt1, turn_dist, ac, turn_speed )
-#                 new_line6 = '{0} > {1} AT {2} DO LNAV {3} ON'.format(
-#                     time, ac, wpt1, ac )
-#                 new_line7 = '{0} > {1} AT {2} DO VNAV {3} ON'.format(
-#                     time, ac, wpt1, ac )
-#                 aux = {}
-#                 aux['standard'] = new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' + \
-#                     new_line3 + '\n' + new_line4 + '\n' + new_line5 + '\n'
-#                 aux['additional1'] = ''
-#                 aux['additional2'] = new_line6 + '\n' + new_line7 + '\n'
-#                 scenario_commands[wpt1] = aux
-#
-#                 scenario_commands = turnDetection( route, i, turn_dist, G, scenario_commands )
-#
-#         elif state['action'] == 'climbing':
-#             new_line1 = '{0} > {1} AT {2} DO {3} ATALT {4}, LNAV {5} ON'.format(
-#                 time, ac, state['ref_wpt'], ac, layers_dict[wpt1[0]] * m2ft, ac )
-#             new_line2 = '{0} > {1} AT {2} DO {3} ATALT {4}, VNAV {5} ON'.format(
-#                 time, ac, state['ref_wpt'], ac, layers_dict[wpt1[0]] * m2ft, ac )
-#             new_line3 = '{0} > {1} AT {2} DO {3} ATALT {4}, ADDWPT {5} {6}, {7}, {8}, {9}'.format(
-#                 time, ac, state['ref_wpt'], ac, layers_dict[wpt1[0]] * m2ft, ac, wpt1, layers_dict[wpt1[0]] * m2ft,
-#                 str( G.edges[( wpt1, wpt2, 0 )]['speed'] * m_s2knot ), state['ref_wpt'] )
-#
-#             aux = {}
-#             aux['standard'] = new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' + \
-#                 new_line3 + '\n'
-#             aux['additional'] = ''
-#             scenario_commands[wpt1] = aux
-#
-#         state['action'] = 'cruise'
-#         state['heading'] = new_heading
-#         return state, scenario_commands
-#
-#     elif wpt1[0] != wpt2[0]:
-#         new_line0 = '{0} > DEFWPT {1},{2},{3}'.format(
-#             time, wpt1, G.nodes[wpt1]['y'], G.nodes[wpt1]['x'] )
-#         if state['action'] == 'cruise':
-#             new_line1 = '{0} > ADDWPT {1} FLYOVER'.format( time, ac )
-#             new_line2 = '{0} > ADDWPT {1} {2}, ,{3}'.format(
-#                 time, ac, wpt1, str( G.edges[( wpt1, wpt2, 0 )]['speed'] * m_s2knot ) )
-#             new_line3 = '{0} > {1} ATDIST {2} {3} SPD {4} {5}'.format(
-#                 time, ac, wpt1, 0.015, ac, 5 )
-#             new_line4 = '{0} > {1} AT {2} DO SPD {3} 0'.format(
-#                 time, ac, wpt1, ac )
-#             new_line5 = '{0} > {1} AT {2} DO ALT {3} {4}'.format(
-#                 time, ac, wpt1, ac, layers_dict[wpt2[0]] * m2ft )
-#             new_line6 = '{0} > {1} AT {2} DO VS {3} {4}'.format(
-#                 time, ac, wpt1, ac, str( G.edges[( wpt1, wpt2, 0 )]['speed'] * m_s2ft_min ) )
-#
-#             aux = {}
-#             aux['standard'] = new_line0 + '\n' + new_line1 + '\n' + new_line2 + '\n' + \
-#                 new_line3 + '\n' + new_line4 + '\n' + new_line5 + '\n' + new_line6 + '\n'
-#             aux['additional'] = ''
-#             scenario_commands[wpt1] = aux
-#
-#             state['ref_wpt'] = wpt1
-#
-#         elif state['action'] == 'climbing':
-#             new_line0 = '{0} > {1} AT {2} DO {3} ATALT {4}, ALT {5} {6}'.format(
-#                 time, ac, state['ref_wpt'], ac, layers_dict[wpt1[0]] * m2ft, ac, layers_dict[wpt2[0]] * m2ft )
-#             new_line1 = '{0} > {1} AT {2} DO {3} ATALT {4}, VS {5} {6}'.format(
-#                 time, ac, state['ref_wpt'], ac, layers_dict[wpt1[0]] * m2ft, ac,
-#                 str( G.edges[( wpt1, wpt2, 0 )]['speed'] * m_s2ft_min ) )
-#
-#             aux = {}
-#             aux['standard'] = new_line0 + '\n' + new_line1 + '\n'
-#             aux['additional'] = ''
-#             scenario_commands[wpt1] = aux
-#
-#         state['action'] = 'climbing'
-#         state['heading'] = 0
-#         return state, scenario_commands
-
 
 def createFlightPlan( route, ac, departure_time, G, layers_dict, scenario_file ):
     """
@@ -924,10 +623,6 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
     """
     print( 'Creating delivery flight plan of {0}...'.format( ac['id'] ) )
     return_path = scenario_path.with_name( scenario_path.stem + '_return.scn' )
-
-    # TODO Remove return_path_rel if not needed
-    # return_path_rel = './' + '/'.join( scenario_path.split( '\\' )[4:] )
-    # return_path_rel = return_path_rel[:-4] + '_return.scn'
 
     m2ft = 3.281
     m_s2knot = 1.944
@@ -1262,7 +957,6 @@ def createDeliveryDrone( orig, dest, departure_time, frequency, uncertainty, dis
 
     # Max time for flight plan
     time_submit_flight_plan = 10 * 60
-    # planned_time_s = n * time_spacing
 
     if frequency != None:
         while departure_time < simulation_time:
@@ -1337,15 +1031,11 @@ def createDeliveryCSV(departure_times, frequencies, uncertainties, distributed, 
     orig_3 = ( 52.3701, 9.7422, 50 )
     origins = [orig_1, orig_2, orig_3]
 
-    # (dest_1_lat, dest_1_lon, dest_1_alt) = (52.3594, 9.7499, 25)
-    # dest_1 = ( 52.3594, 9.7499, 25 )
     dest_1 = ( 52.3594, 9.7499, 25 )
 
     # Checks the format
     idx = 0
     for time in departure_times:
-        # if time is int:
-        #    time = '0{}'.format( str( datetime.timedelta( seconds=time) ) )
         if time != None:
             print( 'Create flight plan orig {0}'.format( idx + 1 ) )
             createDeliveryDrone( origins[idx], dest_1, time, frequencies[idx], uncertainties[idx], distributed, simulation_time, data )
@@ -1586,21 +1276,6 @@ def createScenarioCSV(file_name, nPlans, background_traffic=None, delivery=None,
         print(f'Flight plans stored in: {path}')
 
 
-# def createAllDroneScenario( total_drones ):
-#
-#     departure_time = '00:00:00.00'
-#     folder_path = r'C:\workspace3\bluesky\nommon\city_model\data\Drone_trajectory\scenario_1000_drones'
-#     scenario_path = folder_path + '\scenario_base_' + str( total_drones ) + '.scn'
-#     scenario_file = open( scenario_path, 'w' )
-#     n = 1
-#     while n <= total_drones:
-#         new_line = '{0} > PCALL {1} REL'.format(
-#             departure_time, folder_path + '\scenario_test_' + str( n ) + '.scn' )
-#         scenario_file.write( new_line + '\n' )
-#         n += 1
-#     scenario_file.close()
-
-
 def drawBuildings( config, scenario_path_base, time='00:00:00.00' ):
     """
     Create the scenarios to represent the buildings in BlueSky.
@@ -1619,10 +1294,7 @@ def drawBuildings( config, scenario_path_base, time='00:00:00.00' ):
     directory = config['BuildingData']['directory_hannover']
     building_dict = readCity( directory )
     transformer = Transformer.from_crs( "EPSG:25832", "EPSG:4326", always_xy=True )
-#     lon_min = config['BuildingData'].getfloat( 'lon_min' )
-#     lon_max = config['BuildingData'].getfloat( 'lon_max' )
-#     lat_min = config['BuildingData'].getfloat( 'lat_min' )
-#     lat_max = config['BuildingData'].getfloat( 'lat_max' )
+
     name_base = 'poly'
     idx = 0
     scenario_idx = 1
@@ -1631,10 +1303,7 @@ def drawBuildings( config, scenario_path_base, time='00:00:00.00' ):
         building_list = []
         centroid = building_dict[building]['centroid']
         centroid = transformer.transform( centroid[0], centroid[1] )
-#         if ( centroid[0] > lon_min ) & ( centroid[0] < lon_max ) & ( centroid[1] > lat_min ) & ( centroid[1] < lat_max ) :
-#             idx += 1
-#         else:
-#             continue
+
         idx += 1
 
         for point in building_dict[building]['footprint']:
@@ -1669,7 +1338,6 @@ def createFlightPlansFromCSV( default_path, path_csv, strategic_deconfliction, G
     date_string = datetime.datetime.now().strftime( "%Y%m%d_%H%M%S" )
 
     # Create the path where the scenarios are stored
-    # scenario_general_path_base = path_csv[:-4]
     scenario_general_path_base = default_path + '\\scenario\\usepe\\exercise1\\' + \
         date_string + '_' + path_csv.split( '/' )[-1][:-4]
 
@@ -1682,8 +1350,6 @@ def createFlightPlansFromCSV( default_path, path_csv, strategic_deconfliction, G
     layers_dict = layersDict( config )
 
     for idx, row in data_frame.iterrows():
-
-        # print(row)
 
         orig_lat = row['origin_lat']
         orig_lon = row['origin_lon']
@@ -1768,17 +1434,3 @@ def createFlightPlansFromCSV( default_path, path_csv, strategic_deconfliction, G
 
 if __name__ == '__main__':
     pass
-    # config = configparser.ConfigParser()
-    # config_path = "C:/workspace3/bluesky/nommon/city_model/settings.cfg"
-    # config.read( config_path )
-    # """
-    # # Drawing buildings
-    # time = '00:00:00.00'
-    # scenario_path = r'C:\workspace3\bluesky\nommon\city_model\scenario_buildings.scn'
-    # scenario_file = open( scenario_path, 'w' )
-    # drawBuildings( config, scenario_file, time )
-    # scenario_file.close()
-    # """
-    # createAllDroneScenario( 100 )
-    #
-    # print( 'Finish' )
