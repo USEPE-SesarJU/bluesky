@@ -118,7 +118,6 @@ def readSector( path ):
                         footprint = polygon_face
                         deviation_min = face_deviation
 
-#                     coord_building += coord.text.split( sep=' ' )
             coord_building += footprint
 
         else:
@@ -141,11 +140,9 @@ def readSector( path ):
                         footprint = polygon_face
                         deviation_min = face_deviation
 
-#                     coord_building += coord.text.split( sep=' ' )
             coord_building += footprint
 
         footprint_duplicates = footprintListOfLists( coord_building )
-#         building_footprint = removeDuplicatesList( footprint_duplicates )
         building_footprint = footprint_duplicates
         building_height = float( building.find( "{http://www.opengis.net/citygml/building/2.0}"
                                                 "measuredHeight" ).text )

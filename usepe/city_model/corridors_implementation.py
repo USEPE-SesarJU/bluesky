@@ -129,12 +129,8 @@ def corridorCreation( G, segments, corridor_coordinates, altitude, speed, capaci
         segments - segments updated with the corridors
     '''
 
-    # segments = defineSegment( segments, 0, 0, 0, 0, 0, 0, speed, capacity, name )
-    # segments[name]['updated'] = False
-    # segments[name]['new'] = False
 
     index = 0
-    # nodes_G = []
     nodes_corridor = []
     for point in corridor_coordinates:
         index += 1
@@ -142,10 +138,7 @@ def corridorCreation( G, segments, corridor_coordinates, altitude, speed, capaci
         point_lon = point[0]
         point_lat = point[1]
 
-        # nodes_G += [insertionNode( G, point_lon, point_lat, altitude )]
-
         G.addNodeAltitude( nodes_corridor[-1], point_lat, point_lon, altitude, name )
-        # G.add_node( nodes_corridor[-1], y=point_lat, x=point_lon, z=altitude, segment=name )
 
         # Adds corridor edges to G
         if len( nodes_corridor ) == 1:

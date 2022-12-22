@@ -26,7 +26,6 @@ import osmnx as ox
 import pandas as pd
 
 
-# from usepe.city_model.strategic_deconfliction import initialPopulation, deconflcitedScenario
 __author__ = 'jbueno'
 __copyright__ = '(c) Nommon 2021'
 
@@ -163,7 +162,6 @@ def turnDetectionV2( route_parameters, i ):
     j = i + 1
     option = 1
     while ( total_dist < maximum_turn_distance ) & ( str( j ) in route_parameters ):
-#         total_dist += route_parameters[str( j - 1 )]['dist'] * m2nm
         total_dist = ox.distance.great_circle_vec( route_parameters[str( i )]['lat'],
                                                    route_parameters[str( i )]['lon'],
                                                    route_parameters[str( j )]['lat'],
@@ -614,10 +612,6 @@ def createDeliveryFlightPlan( route1, route2, ac, departure_time, G, layers_dict
     print( 'Creating delivery flight plan of {0}...'.format( ac['id'] ) )
     return_path = scenario_path.with_name( scenario_path.stem + '_return.scn' )
 
-    # TODO Remove return_path_rel if not needed
-    # return_path_rel = './' + '/'.join( scenario_path.split( '\\' )[4:] )
-    # return_path_rel = return_path_rel[:-4] + '_return.scn'
-
     m2ft = 3.281
     m_s2knot = 1.944
     m_s2ft_min = 197  # m/s to ft/min
@@ -933,7 +927,6 @@ def createDeliveryDrone( orig, dest, departure_time, frequency, uncertainty, dis
 
     # Max time for flight plan
     time_submit_flight_plan = 10 * 60
-    # planned_time_s = n * time_spacing
 
     if frequency != None:
         while departure_time < simulation_time:
@@ -1008,15 +1001,11 @@ def createDeliveryCSV(departure_times, frequencies, uncertainties, distributed, 
     orig_3 = ( 52.3701, 9.7422, 50 )
     origins = [orig_1, orig_2, orig_3]
 
-    # (dest_1_lat, dest_1_lon, dest_1_alt) = (52.3594, 9.7499, 25)
-    # dest_1 = ( 52.3594, 9.7499, 25 )
     dest_1 = ( 52.3594, 9.7499, 25 )
 
     # Checks the format
     idx = 0
     for time in departure_times:
-        # if time is int:
-        #    time = '0{}'.format( str( datetime.timedelta( seconds=time) ) )
         if time != None:
             print( 'Create flight plan orig {0}'.format( idx + 1 ) )
             createDeliveryDrone( origins[idx], dest_1, time, frequencies[idx], uncertainties[idx], distributed, simulation_time, data )
@@ -1281,10 +1270,7 @@ def drawBuildings( config, scenario_path_base, time='00:00:00.00' ):
     directory = config['BuildingData']['directory_hannover']
     building_dict = readCity( directory )
     transformer = Transformer.from_crs( "EPSG:25832", "EPSG:4326", always_xy=True )
-#     lon_min = config['BuildingData'].getfloat( 'lon_min' )
-#     lon_max = config['BuildingData'].getfloat( 'lon_max' )
-#     lat_min = config['BuildingData'].getfloat( 'lat_min' )
-#     lat_max = config['BuildingData'].getfloat( 'lat_max' )
+
     name_base = 'poly'
     idx = 0
     scenario_idx = 1
@@ -1293,10 +1279,7 @@ def drawBuildings( config, scenario_path_base, time='00:00:00.00' ):
         building_list = []
         centroid = building_dict[building]['centroid']
         centroid = transformer.transform( centroid[0], centroid[1] )
-#         if ( centroid[0] > lon_min ) & ( centroid[0] < lon_max ) & ( centroid[1] > lat_min ) & ( centroid[1] < lat_max ) :
-#             idx += 1
-#         else:
-#             continue
+
         idx += 1
 
         for point in building_dict[building]['footprint']:
@@ -1334,7 +1317,6 @@ def createFlightPlansFromCSV( default_path, path_csv, strategic_deconfliction, G
     date_string = datetime.datetime.now().strftime( "%Y%m%d_%H%M%S" )
 
     # Create the path where the scenarios are stored
-    # scenario_general_path_base = path_csv[:-4]
     scenario_general_path_base = default_path + '\\scenario\\usepe\\exercise1\\' + \
         date_string + '_' + path_csv.split( '/' )[-1][:-4]
 
@@ -1347,8 +1329,6 @@ def createFlightPlansFromCSV( default_path, path_csv, strategic_deconfliction, G
     layers_dict = layersDict( config )
 
     for idx, row in data_frame.iterrows():
-
-        # print(row)
 
         orig_lat = row['origin_lat']
         orig_lon = row['origin_lon']
