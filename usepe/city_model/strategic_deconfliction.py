@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
-"""
-A module responsible for strategic deconfliction
-"""
+"""A module responsible for strategic deconfliction."""
 from operator import add
 from pickle import FALSE
 import datetime
@@ -22,17 +20,18 @@ __copyright__ = '(c) Nommon 2021'
 def initialPopulation( segments, t0, tf ):
     """
     Create an initial data structure with the information of how the segments are populated.
-    The information is stored as a list for each segment: segment(j) = [x(t1), x(t2), x(t3),..., x(tn)],
-    where x(t) represents the number of drones in the segment j during the second t.
-    Initially, all values are zeros.
+
+    The information is stored as a list for each segment:
+    segment(j) = [x(t1), x(t2), x(t3),..., x(tn)], where x(t) represents the number of drones in
+    the segment j during the second t. Initially, all values are zeros.
 
     Args:
-            segments (dictionary): dictionary with all the information about segments
-            t0 (integer): initial seconds of the flight plan time horizon
-            tf (integer): final seconds of the flight plan time horizon
+        segments (dictionary): Information about the segments
+        t0 (integer): Initial seconds of the flight plan time horizon
+        tf (integer): Final seconds of the flight plan time horizon
 
     Returns:
-            users (dictionary): information of how the segments are populated from t0 to tf
+        users (dictionary): Information on how the segments are populated from t0 to tf
     """
     users = {}
     empty_list = [0 for i in range( tf - t0 )]
@@ -44,15 +43,16 @@ def initialPopulation( segments, t0, tf ):
 
 def calcTravelTime( route_parameters, ac, step ):
     """
-    Calculate the travel time of a segment considering the times needed to accelerate and decelerate
+    Calculate the travel time of a segment considering the time needed
+    to accelerate and decelerate.
 
     Args:
-            route_parameters (dictionary): dictionary with all the information about the route
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max}
-            step (integer): indicating the the step of the route
+        route_parameters (dictionary): Information about the route
+        ac (dictionary): Aircraft parameters {id, type, accel, v_max, vs_max, ...}
+        step (integer): The step of the route
 
     Returns:
-            t (float): travel time in seconds
+        t (float): Travel time in seconds
     """
     m2nm = 0.000539957
     m_s2knot = 1.944
@@ -108,24 +108,25 @@ def calcTravelTime( route_parameters, ac, step ):
 def droneAirspaceUsage( G, route, time, users_planned, initial_time, final_time,
                         route_parameters, ac ):
     """
-    Computes how the new user populates the segments. It returns the information of how the segments
-    are populated including the tentative flight plan of the new drone.
+    Compute how the new user populates the segments.
+    
+    It returns the information on how the segments are populated including the tentative
+    flight plan of the new drone.
 
     Args:
-            G (graph): a graph representing the city
-            route (list): list containing the waypoints of the optimal route
-            time (int): integer representing the departure time in seconds relative to initial_time
-            users (dictionary): information of how the segments are populated from t0 to tf
-            initial_time (int): integer representing the initial time in seconds of the period under
-                study
-            final_time (int): integer representing the final time in seconds of the period under
-                study
-            route_parameters (dictionary): dictionary with all the information about the route
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max, safety_volume_size}
+        G (graph): Graph of the area simulated
+        route (list): Waypoints of the optimal route
+        time (integer): Departure time in seconds relative to initial_time
+        users_planned (dictionary): Information on how the segments are populated from t0 to tf
+        initial_time (integer): Initial time in seconds of the period under study
+        final_time (integer): Final time in seconds of the period under study
+        route_parameters (dictionary): Information about the route
+        ac (dictionary): Aircraft parameters {id, type, v_max, vs_max, safety_volume_size, ...}
 
     Returns:
-            users (dictionary): information of how the segments are populated from t0 to tf
-                including the tentative flight plan of the new drone
+        users (dictionary): Information on how the segments are populated from t0 to tf
+            including the tentative flight plan of the new drone
+        segments_updated (list): All the segments traversed by the drone
     """
     users = users_planned.copy()
     actual_segment = None
@@ -177,24 +178,27 @@ def droneAirspaceUsage( G, route, time, users_planned, initial_time, final_time,
 def droneAirspaceUsageDelivery( G, route, time, users_planned, initial_time, final_time,
                                 route_parameters, ac, hovering_time ):
     """
-    Computes how the new user populates the segments. It returns the information of how the segments
-    are populated including the tentative flight plan of the new drone.
+    Compute how the new delivery drone populates the segments.
+    
+    It returns the information on how the segments are populated including the tentative
+    flight plan of the new drone, and the departure time of the return trip.
 
     Args:
-            G (graph): a graph representing the city
-            route (list): list containing the waypoints of the optimal route
-            time (int): integer representing the departure time in seconds relative to initial_time
-            users (dictionary): information of how the segments are populated from t0 to tf
-            initial_time (int): integer representing the initial time in seconds of the period under
-                study
-            final_time (int): integer representing the final time in seconds of the period under
-                study
-            route_parameters (dictionary): dictionary with all the information about the route
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max, safety_volume_size}
+        G (graph): Graph of the area simulated
+        route (list): Waypoints of the optimal route
+        time (integer): Departure time in seconds relative to initial_time
+        users_planned (dictionary): Information on how the segments are populated from t0 to tf
+        initial_time (integer): Initial time in seconds of the period under study
+        final_time (integer): Final time in seconds of the period under study
+        route_parameters (dictionary): Information about the route
+        ac (dictionary): Aircraft parameters {id, type, v_max, vs_max, safety_volume_size, ...}
+        hovering_time (integer): The duration for which the delivery drone remains in the air
+            above the delivery point
 
     Returns:
-            users (dictionary): information of how the segments are populated from t0 to tf
-                including the tentative flight plan of the new drone
+        users (dictionary): Information on how the segments are populated from t0 to tf
+            including the tentative flight plan of the new drone
+        tf + hovering_time (integer): Departure time from the delivery point
     """
     users = users_planned.copy()
     actual_segment = None
@@ -239,23 +243,22 @@ def droneAirspaceUsageDelivery( G, route, time, users_planned, initial_time, fin
 
 def checkOverpopulatedSegment( segments, users, initial_time, final_time, segments_updated=None ):
     """
-    Check if any segment is overpopulated. It returns the segment name and the time when the segment
-    gets overcrowded. If no segment is overpopulated, it retunrs None.
+    Check if any segment is overpopulated.
+    
+    It returns the segment name and the time when the segment gets overcrowded.
+    If no segment is overpopulated, it returns None.
 
     Args:
-            segments (dictionary): dictionary with the segment information
-            users (dictionary): information of how the segments are populated from t0 to tf
-            initial_time (int): integer representing the initial time in seconds of the period under
-                study
-            final_time (int): integer representing the final time in seconds of the period under
-                study
-            segments_updated (list): list indicating the segments used by the new drone
+        segments (dictionary): Information about the segments
+        users (dictionary): Information on how the segments are populated from t0 to tf
+        initial_time (integer): Initial time in seconds of the period under study
+        final_time (integer): Final time in seconds of the period under study
+        segments_updated (list): All the segments traversed by the drone
 
     Returns:
-            overpopulated_segment (string): segment name
-            overpopulated_time (int): time when the segment gets overcrowded. Value in seconds and
-                relative to the initial time.
-
+        overpopulated_segment (string): Segment name
+        overpopulated_time (integer): Time when the segment gets overcrowded. Value in seconds and
+            relative to the initial time.
     """
     overpopulated_segment = None
     overpopulated_time = None
@@ -285,39 +288,42 @@ def checkOverpopulatedSegment( segments, users, initial_time, final_time, segmen
 def deconflictedPathPlanning( orig, dest, time, G, users, initial_time, final_time, segments,
                               config, ac, only_rerouting=False, delivery=False, hovering_time=30 ):
     """
-    Computes an optimal flight plan without exceeding the segment capacity limit. The procedure
-    consist in:
+    Compute an optimal flight plan without exceeding the segment capacity limit.
+    
+    The procedure consist of:
     1. Compute optimal path from origin to destination.
     2. While including the new drone a segment capacity limit is exceeded:
         2.1. A sub-optimal trajectory is computed without considering the overpopulated segment.
-        2.2. If the travel time of the sub-optimal trajectory divided by the optimal travel time is
-            higher than a configurable threshold:
+        2.2. If the travel time of the sub-optimal trajectory divided by the optimal travel
+        time is higher than a configurable threshold:
             2.2.1. The flight is delayed by a configurable value.
             2.2.2. Repeat step 2 with the new departure time.
-    3. It returns the flight plan, the departure time and the new information about how the segments
-        are populated
+    3. It returns the flight plan, the departure time and the new information about how the
+    segments are populated.
+    
     Args:
-            orig (list): with the coordinates of the origin point [longitude, latitude]
-            dest (list): with the coordinates of the destination point [longitude, latitude]
-            time (int): integer representing the departure time in seconds relative to initial_time
-            G (graph): a graph representing the city
-            users (dictionary): information of how the segments are populated from initial time to
-                final time.
-            initial_time (int): integer representing the initial time in seconds of the period under
-                study
-            final_time (int): integer representing the final time in seconds of the period under
-                study
-            segments (dictionary): dictionary with the segment information
-
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max}
+        orig (list): Coordinates of the origin point [longitude, latitude]
+        dest (list): Coordinates of the destination point [longitude, latitude]
+        time (integer): Departure time in seconds relative to initial_time
+        G (graph): Graph of the area simulated
+        users (dictionary): Information on how the segments are populated from initial time to
+            final time.
+        initial_time (integer): Initial time in seconds of the period under study
+        final_time (integer): Final time in seconds of the period under study
+        segments (dictionary): Information about the segments
+        config (ConfigParser): Configuration file
+        ac (dictionary): Aircraft parameters {id, type, v_max, vs_max, safety_volume_size, ...}
+        only_rerouting (boolean): True if the path to deconflict is in the middle of the flight
+        delivery (boolean): True if this is the first part of a delivery route
+        hovering_time (integer): The duration for which the delivery drone remains in the air
+            above the delivery point
 
     Returns:
-            users_step (dictionary): information of how the segments are populated from initial time to
-                final time including the deconflcited trajectory of the new dorne.
-            route (list): list containing the waypoints of the optimal route
-            delayed_time (int): indicating how many seconds the flight is delayed respect to the
-                desired departure time
-
+        users_step (dictionary): Information on how the segments are populated from initial time to
+            final time including the deconflicted trajectory of the new drone
+        route (list): Waypoints of the optimal route
+        delayed_time (integer): Number of seconds the flight is delayed with respect to the
+            desired departure time
     """
     # avg_flight_time = 20 * 60
 
@@ -401,41 +407,47 @@ def deconflictedDeliveryPathPlanning( orig1, dest1, orig2, dest2, time, G, users
                                       final_time, segments, config, ac, hovering_time=30,
                                       only_rerouting=False ):
     """
-    Computes an optimal flight plan without exceeding the segment capacity limit. The procedure
-    consist in:
+    Compute an optimal flight plan without exceeding the segment capacity limit.
+    
+    The procedure consist in:
     1. Compute optimal path from origin to destination.
     2. While including the new drone a segment capacity limit is exceeded:
         2.1. A sub-optimal trajectory is computed without considering the overpopulated segment.
-        2.2. If the travel time of the sub-optimal trajectory divided by the optimal travel time is
-            higher than a configurable threshold:
+        2.2. If the travel time of the sub-optimal trajectory divided by the optimal travel
+        time is higher than a configurable threshold:
             2.2.1. The flight is delayed by a configurable value.
             2.2.2. Repeat step 2 with the new departure time.
-    3. It returns the flight plan, the departure time and the new information about how the segments
-        are populated
-    Args:
-            orig (list): with the coordinates of the origin point [longitude, latitude]
-            dest (list): with the coordinates of the destination point [longitude, latitude]
-            time (int): integer representing the departure time in seconds relative to initial_time
-            G (graph): a graph representing the city
-            users (dictionary): information of how the segments are populated from initial time to
-                final time.
-            initial_time (int): integer representing the initial time in seconds of the period under
-                study
-            final_time (int): integer representing the final time in seconds of the period under
-                study
-            segments (dictionary): dictionary with the segment information
+    3. It returns the flight plan, the departure time and the new information about how the
+    segments are populated
 
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max}
+    Args:
+        orig1 (list): Coordinates of the origin point of the first part of delivery
+            [longitude, latitude]
+        dest1 (list): Coordinates of the destination point of the first part of delivery
+            [longitude, latitude]
+        orig2 (list): Coordinates of the origin point of the return trip [longitude, latitude]
+        dest2 (list): Coordinates of the destination point of the return trip [longitude, latitude]
+        time (integer): Departure time in seconds relative to initial_time
+        G (graph): Graph of the area simulated
+        users (dictionary): Information on how the segments are populated from initial time to
+            final time
+        initial_time (integer): Initial time in seconds of the period under study
+        final_time (integer): Final time in seconds of the period under study
+        segments (dictionary): Information about the segments
+        config (ConfigParser): Configuration file
+        ac (dictionary): Aircraft parameters {id, type, v_max, vs_max, safety_volume_size, ...}
+        hovering_time (integer): The duration for which the delivery drone remains in the air
+            above the delivery point
+        only_rerouting (boolean): True if the path to deconflict is in the middle of the flight
 
     Returns:
-            users_step (dictionary): information of how the segments are populated from initial time to
-                final time including the deconflcited trajectory of the new dorne.
-            route (list): list containing the waypoints of the optimal route
-            delayed_time (int): indicating how many seconds the flight is delayed respect to the
-                desired departure time
-
+        users2 (dictionary): information of how the segments are populated from initial time to
+            final time including the deconflicted trajectory of the new drone.
+        [route1, route2] (list): list containing the waypoints of the optimal route, for the trip
+            to and from the delivery point
+        delayed_time (integer): Number of seconds the flight is delayed with respect to the
+            desired departure time
     """
-
     users1, route1, delayed_time1, departure2 = deconflictedPathPlanning( orig1, dest1, time, G, users,
                                                            initial_time, final_time, segments,
                                                            config, ac, only_rerouting=only_rerouting,
@@ -451,57 +463,35 @@ def deconflictedDeliveryPathPlanning( orig1, dest1, orig2, dest2, time, G, users
 
 def deconflictedSurveillancePathPlanning( orig1, dest1, orig2, dest2, departure_time, G, users, initial_time,
                                         final_time, segments, config, ac, only_rerouting=False, wait_time=600 ):
-    """
-    This function
-
-    Args:
-        - orig (list): Coordinates of origin [longitude, latitude]
-        - dest (list): Coordinates of destination [longitude, latitude]
-        - departure_time (int): Departure time in seconds, relative to initial_time
-        - G (graph): Graph representing the area
-        - users (dict): Information on how segments are populated for the entire duration
-        - initial_time (int): Initial time of simulation in seconds
-        - final_time (int): Final time of simulation in seconds
-        - segments (dict): Segment information
-        - config (Config): Configuration of the simulation
-        - ac (dict): Aircraft parameters
-        - only_rerouting (Boolean): True if rerouting an existing plan
-        - wait_time (int): How long before making the return trip after arrival
-
-    Returns:
-        - users2 (dict): Information on how segments are populated for the entire duration, including this latest flight
-        - route (list): Waypoints of the optimal route, for both trips
-        - delayed_time1 (int): Delay of the flight (first trip) in seconds
-    """
-
+    """Dummy function to allow premade scenarios to circumvent deconfliction."""
     return users, [], departure_time
 
 
 def deconflcitedScenario( orig, dest, ac, departure_time, G, users, initial_time, final_time,
                           segments, layers_dict, scenario_file, config ):
     """
-    A strategic deconflicted trajectory from origin to destination is computed and a BluSky scenario
-    is generated.
+    A strategic deconflicted trajectory from origin to destination is computed and a BlueSky
+    scenario is generated.
 
     Args:
-            orig (list): with the coordinates of the origin point [longitude, latitude]
-            dest (list): with the coordinates of the destination point [longitude, latitude]
-            ac (dictionary): aircraft parameters {id, type, accel, v_max, vs_max}
-            departure_time (int): integer representing the departure time in seconds relative to initial_time
-            G (graph): a graph representing the city
-            users (dictionary): information of how the segments are populated from initial time to
-                final time.
-            initial_time (int): integer representing the initial time in seconds of the period under
-                study
-            final_time (int): integer representing the final time in seconds of the period under
-                study
-            segments (dictionary): dictionary with the segment information
-            layers_dict (dictionary): dictionary with the information about layers and altitudes
-            scenario_file (object): text file object where the commands are written
+        orig (list): Coordinates of the origin point [longitude, latitude]
+        dest (list): Coordinates of the destination point [longitude, latitude]
+        ac (dictionary): Aircraft parameters {id, type, v_max, vs_max, safety_volume_size, ...}
+        departure_time (integer): Departure time in seconds relative to initial_time
+        G (graph): Graph of the area simulated
+        users (dictionary): Information on how the segments are populated from initial time to
+            final time.
+        initial_time (integer): Initial time in seconds of the period under study
+        final_time (integer): Final time in seconds of the period under study
+        segments (dictionary): Information about the segments
+        layers_dict (dictionary): Information about layers and altitudes
+        scenario_file (object): Text file object where the commands are written
+        config (ConfigParser): Configuration file
 
     Returns:
-            users (dictionary): information of how the segments are populated from initial time to
-                final time.
+        users (dictionary): Information on how the segments are populated from initial time to
+            final time
+        route (list): Waypoints of the optimal route
     """
 
     users, route, delayed_time = deconflictedPathPlanning( orig, dest, departure_time, G, users,

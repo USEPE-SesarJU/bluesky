@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
-"""
-
-"""
+"""Define and create the segments of the airspace division, and apply it to the city graph."""
 
 __author__ = 'jbueno'
 __copyright__ = '(c) Nommon 2021'
@@ -27,19 +25,19 @@ def defineSegment( segments, lon_min, lon_max, lat_min, lat_max, z_min, z_max,
                         the speed will be updated); "False" otherwise
 
     Args:
-            segments (dictionary): dictionary with the segment information
-            lon_min (float): minimum longitude
-            lon_max (float): maximum longitude
-            lat_min (float): minimum latitude
-            lat_max (float): maximum latitude
-            z_min (float): minimum altitude
-            z_max (float): maximum altitude
-            speed (float): maximum speed of the segment
-            capacity (integer): capacity of the segment in terms of number of drones
-            name (string): id of the segment
+        segments (dictionary): segment information
+        lon_min (float): minimum longitude
+        lon_max (float): maximum longitude
+        lat_min (float): minimum latitude
+        lat_max (float): maximum latitude
+        z_min (float): minimum altitude
+        z_max (float): maximum altitude
+        speed (float): maximum speed of the segment
+        capacity (integer): capacity of the segment in terms of number of drones
+        name (string): id of the segment
 
     Returns:
-            segments (dictionary): updated dictionary with the segment information
+        segments (dictionary): updated dictionary with the segment information
     """
     segments[name] = {'class': 'white',
                       'lon_min': lon_min,
@@ -62,22 +60,23 @@ def defineSegment( segments, lon_min, lon_max, lat_min, lat_max, z_min, z_max,
 def divideAirspaceSegments( lon_min, lon_max, lat_min, lat_max, z_min, z_max, divisions_lon,
                             divisions_lat, divisions_z ):
     """
-    Create a default segment division of the airspace. The default segmentation divide the airspace
-    evenly
+    Create a default segment division of the airspace.
+    
+    The default segmentation divide the airspace evenly.
 
     Args:
-            lon_min (float): float representing the minimum longitude of the graph
-            lon_max (float): float representing the maximum longitude of the graph
-            lat_min (float): float representing the minimum latitude of the graph
-            lat_max (float): float representing the maximum latitude of the graph
-            z_min (float): float representing the minimum altitude of the graph
-            z_max (float): float representing the minimum altitude of the graph
-            divisions_lon (integer): integer indicating the number of segments in the longitude direction
-            divisions_lat (integer): integer indicating the number of segments in the latitude direction
-            divisions_z (integer): integer indicating the number of segments in the z direction
+        lon_min (float): minimum longitude of the graph
+        lon_max (float): maximum longitude of the graph
+        lat_min (float): minimum latitude of the graph
+        lat_max (float): maximum latitude of the graph
+        z_min (float): minimum altitude of the graph
+        z_max (float): minimum altitude of the graph
+        divisions_lon (integer): number of segments in the longitude direction
+        divisions_lat (integer): number of segments in the latitude direction
+        divisions_z (integer): number of segments in the z direction
 
     Returns:
-            segments (dictionary): dictionary with all the information about segments
+        segments (dictionary): information about segments
 
     """
 
@@ -114,14 +113,18 @@ def divideAirspaceSegments( lon_min, lon_max, lat_min, lat_max, z_min, z_max, di
 
 def selectNodesWithNewSegments( G, segments, deleted_segments ):
     """
-    Select the nodes affected by the new segmentation. It takes the new nodes, the nodes belonging
-    to new segments and the nodes belonging to segments that has been deleted
+    Select the nodes affected by the new segmentation.
+    
+    It takes the new nodes, the nodes belonging to new segments and the nodes belonging to
+    segments that has been deleted.
 
     Args:
-            G (graph): graph representing the city
-            segments_df (DataFrame): dataframe with the segment information
-            deleted_segments (list): a list containing the segments that has been deleted
+        G (graph): graph representing the city
+        segments (DataFrame): segment information
+        deleted_segments (list): segments that has been deleted
 
+    Returns:
+        df.index (Index): the labels of the nodes affected by the new segmentation
     """
     new_segments = list( segments.index )
     deleted_segments = list( deleted_segments.index )
@@ -142,18 +145,18 @@ def selectNodesWithNewSegments( G, segments, deleted_segments ):
 
 def assignSegmet2Edge( G, segments_df, deleted_segments ):
     """
-    Assign to each node and edge the segment it belongs to. If the origin node of an edge belongs to
-    the segment, then the edge belongs to the segment.
+    Assign to each node and edge the segment it belongs to.
+    
+    If the origin node of an edge belongs to the segment, then the edge belongs to the segment.
 
     Args:
-            G (graph): graph representing the city
-            segments_df (DataFrame): dataframe with the segment information
-            deleted_segments (list): a list containing the segments that has been deleted
+        G (graph): graph representing the city
+        segments_df (DataFrame): segment information
+        deleted_segments (list): segments that has been deleted
 
     Returns:
-            G (graph): updated graph
+        G (graph): updated graph
     """
-
     if segments_df.empty:
         print( 'No new segments' )
         return G
@@ -202,10 +205,11 @@ def updateSegmentVelocity( G, segments ):
     Update the edge speed according to the new segmentation.
 
     Args:
-            G (graph): graph representing the city
-            segments (DataFrame): dataframe with the segment information
+        G (graph): graph representing the city
+        segments (DataFrame): segment information
+    
     Returns:
-            G (graph): updated graph
+        G (graph): updated graph
     """
     if segments.empty:
         print( 'No new velocities' )
@@ -232,17 +236,16 @@ def updateSegmentVelocity( G, segments ):
 
 def applyGeovectoringRule( df, segments, G ):
     """
-    apply a Geovectoring rule to an edge
+    Apply a geovectoring rule to an edge.
 
     Args:
         df (object): row of a dataframe
-        segments (dataframe): dataframe with the segment information
-        G (graph)
+        segments (DataFrame): segment information
+        G (graph): graph representing the city
 
-    return
-        speed (float)
+    Returns:
+        speed (float): maximum speed of the edge
     """
-
     rule = segments[segments.index == df.segment]['geovect'].iloc[0]
 
     O = df.name[0]
@@ -276,12 +279,12 @@ def updateGeovectoringRule( G, all_segments ):
     Update the edge speed according to the new segmentation and the geovectoring rules: NSEW
 
     Args:
-            G (graph): graph representing the city
-            segments (DataFrame): dataframe with the segment information
+        G (graph): graph representing the city
+        all_segments (DataFrame): segment information
+    
     Returns:
-            G (graph): updated graph
+        G (graph): updated graph
     """
-
     segments = all_segments[all_segments['geovect'] != 'NSEW' ]
     if segments.empty:
         print( 'No geovectoring rules' )
@@ -308,11 +311,13 @@ def updateGeovectoringRule( G, all_segments ):
 def addTravelTimes( G, precision=4 ):
     """
     Calculate the travel time of all the edges.
+
     Args:
-            G (graph): graph representing the city
-            precision (integer): integer to round the travel time
+        G (graph): graph representing the city
+        precision (integer): value to round the travel time
+    
     Returns:
-            G (graph): updated graph
+        G (graph): updated graph
     """
     print( 'Updating travel times...' )
     edges = ox.utils_graph.graph_to_gdfs( G, nodes=False, fill_edge_geometry=False )
@@ -335,18 +340,18 @@ def addTravelTimes( G, precision=4 ):
 
 def dynamicSegments( G, config, segments=None, deleted_segments=None ):
     """
-    Assign segments to edges, and update velocities and and travel times. If segments information is
+    Assign segments to edges, and update velocities and travel times. If segments information is
     not provided, a default segmentation is created.
 
     Args:
-            G (graph): graph representing the city
-            config (configuration file): configuration file with all the relevant information
-            segments (dataframe): dataframe with all the information about segments
-            deleted_segments (list): a list containing the segments that has been deleted
+        G (graph): graph representing the city
+        config (ConfigParser): configuration file with all the relevant information
+        segments (DataFrame): information about segments
+        deleted_segments (list): segments that has been deleted
 
     Returns:
-            G (graph): updated graph representing the city according to the segmetns
-            segments (dictionary): updated dictionary with all the information about segments
+        G (graph): updated graph representing the city according to the segments
+        segments (DataFrame): updated information about segments
     """
     print( 'Updating segments...' )
     if ( type( segments ) != pd.DataFrame ) and ( type( segments ) != gpd.GeoDataFrame ):

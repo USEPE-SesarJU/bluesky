@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
-"""
-Script to create the graph of a city
-"""
+"""Script to create the graph of a city."""
+
 import configparser
 import os
 import string
@@ -21,17 +20,17 @@ __copyright__ = '(c) Nommon 2021'
 
 def cityGraph( config ):
     """
-    It creates a 3D graph of a city based on the parameters of the configuration file
+    Create a 3D graph of a city based on the parameters of the configuration file.
+
+    In the graph, amongst the buildings, the edges represents streets and the nodes represents
+    intersections.
 
     Args:
-            config (configuration file): A configuration file with all the relevant information
+        config (configuration file): A configuration file with all the relevant information
 
     Returns:
-            G (graph): graph representing the available urban airspace for drones
+        G (graph): graph representing the available urban airspace for drones
     """
-
-    # We import a graph of the city with all the streets = edges, and intersections = nodes
-
     # Study zone + import the graph from OSM
     if config['City']['mode'] == 'square':
         hannover = ( config['City'].getfloat( 'hannover_lat' ),

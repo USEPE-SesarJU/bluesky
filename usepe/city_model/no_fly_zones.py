@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
-"""
-
-"""
+"""Define no-fly zones and apply them to the segments."""
 
 
 __author__ = 'mbaena'
@@ -16,17 +14,17 @@ from shapely.geometry import Polygon
 
 def intersection( restricted_area, segment, segments ):
     """
-    Returns True if the point is contained in the box
+    Return True if the given segment intersects with the restricted area.
 
-    Input:
-        restricted_area - shape of the restricted area.
-                            Polygon defined by its edges  [(lon1, lat1), (lon2, lat2)...]
-        segment - segment. Only segment coordinates are used [lon_min, lon_max, lat_min, lat_max]
+    Args:
+        restricted_area (list): shape of the restricted area,
+                                as a Polygon with each vertex defined as a tuple (lon, lat)
+        segment (string): id of segment
+        segments (dictionary): segment information
 
-    Output:
-        boolean - true if restricted area intersects the segment area
+    Returns:
+        boolean: True if restricted area intersects with the segment area
     """
-
     restricted_area_shape = Polygon( restricted_area )
     segment_box = [( segments[segment]['lon_min'], segments[segment]['lat_min'] ),
                    ( segments[segment]['lon_max'], segments[segment]['lat_min'] ),
@@ -40,24 +38,18 @@ def intersection( restricted_area, segment, segments ):
 
 def restrictedSegments( G, segments, restricted_area, config ):
     """
-    This function imposes zero speed limitations to the desired segments, creating a restricted
-    area for flying
+    Impose zero speed limitations on the certain segments, creating a restricted area for flying.
 
-    # Segments attributes example:
-    # {'lon_min': 9.75, 'lon_max': 9.765,
-        'lat_min': 52.375, 'lat_max': 52.3875,
-        'z_min': 0.0, 'z_max': 125.0,
-        'speed': 39.0, 'capacity': 16,
-        'new': False, 'updated': False}
+    Args:
+        G (graph): graph of the city
+        segments (dictionary): segment information
+        restricted_area (list): shape of the restricted area,
+                                as a Polygon with each vertex defined as a tuple (lon, lat)
+        config (ConfigParser): configuration file with all the relevant information
 
-    Input
-        G - graph
-        segments - segments
-        restricted_area - point, polygon defining the restriction zone [(lon1, lat1), (lon2, lat2)...]
-
-    Output
-        G - updated graph with restricted zones
-        segments - updated segments with restricted zones
+    Returns:
+        G (graph): updated graph with restricted zones
+        segments (dictionary): updated segments with restricted zones
     """
     for segment in segments:
         if intersection( restricted_area, segment, segments ):

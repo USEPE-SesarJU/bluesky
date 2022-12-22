@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
-"""
-A module to define the sectors into which the city is divided to consider the building height
-"""
+""" A module to define the sectors into which the city is divided,
+    considering the building heights in each sector."""
 
 __author__ = 'jbueno'
 __copyright__ = '(c) Nommon 2021'
@@ -13,15 +12,17 @@ import pandas as pd
 
 def defSectors( lon_min, lon_max, lat_min, lat_max, divisions ):
     """
-    Define sectora
+    Define sectors within a given area.
+
     Args:
-            lon_min (float): float representing the minimum longitude of the region where building altitude is considered.
-            lon_max (float): float representing the maximum longitude of the region where building altitude is considered.
-            lat_min (float): float representing the minimum latitude of the region where building altitude is considered.
-            lat_max (float): float representing the maximum latitude of the region where building altitude is considered.
-            divisions (integer): integer representing the number of horizontal and vertical airspace divisions.
+        lon_min (float): minimum longitude of the region where building altitude is considered.
+        lon_max (float): maximum longitude of the region where building altitude is considered.
+        lat_min (float): minimum latitude of the region where building altitude is considered.
+        lat_max (float): maximum latitude of the region where building altitude is considered.
+        divisions (integer): number of horizontal and vertical airspace divisions.
+
     Returns:
-            sectors (DataFrame): dataframe with the sector information
+        sectors (DataFrame): dataframe with the sector information
     """
     delta_lon = ( lon_max - lon_min ) / divisions
     delta_lat = ( lat_max - lat_min ) / divisions
@@ -43,14 +44,14 @@ def defSectors( lon_min, lon_max, lat_min, lat_max, divisions ):
 
 def sectorContainPoint( sectors, point ):
     """
-    Determine the sector to which the point belongs
+    Determine the sector to which a given point belongs.
 
     Args:
-            sectors (DataFrame): dataframe with the sector information
-            point (list): point coordinates
+        sectors (DataFrame): dataframe with the sector information
+        point (list): point coordinates
 
     Returns:
-            sector (string): sector to which the point belongs
+        sector (string): sector to which the point belongs
     """
     sector_row = sectors.loc[( sectors['lon_min'] <= point[0] ) &
                              ( sectors['lon_max'] > point[0] ) &
@@ -66,14 +67,14 @@ def sectorContainPoint( sectors, point ):
 
 def addSector2Building( building_dict, sectors ):
     """
-    Add the sector to which the building belongs
+    Add the coresponding sector to the information of each building.
 
     Args:
-            building_dict (dictionary): building information
-            sectors (DataFrame): dataframe with the sector information
+        building_dict (dictionary): building information
+        sectors (DataFrame): sector information
 
     Returns:
-            building_dict (dictionary): building information with the new parameter "sector"
+        building_dict (dictionary): building information with the new parameter "sector"
     """
     building_df = pd.DataFrame.from_dict( building_dict, orient='index' )
 
@@ -88,14 +89,14 @@ def addSector2Building( building_dict, sectors ):
 
 def defSectorsAltitude( sectors, building_dict ):
     """
-    Determine the altitude limit of each sector
+    Determine the altitude limit of each sector.
 
     Args:
-            sectors (DataFrame): dataframe with the sector information
-            building_dict (dictionary): building information
+        sectors (DataFrame): sector information
+        building_dict (dictionary): building information
 
     Returns:
-            sectors (DataFrame): dataframe with the sector information with the new column "altitude_limit"
+        sectors (DataFrame): sector information with the new column "altitude_limit"
     """
     df = pd.DataFrame.from_dict( building_dict, orient='index' )
     sector_altitude_list = []
@@ -115,20 +116,20 @@ def defSectorsAltitude( sectors, building_dict ):
 
 def mainSectorsLimit( lon_min, lon_max, lat_min, lat_max, divisions, building_dict ):
     """
-    Create the division in sectors, assign a sector to each building and define the altitude of
+    Divide a region into sectors, assign a sector to each building and define the altitude of
     sectors.
 
     Args:
-            lon_min (float): float representing the minimum longitude of the region where building altitude is considered.
-            lon_max (float): float representing the maximum longitude of the region where building altitude is considered.
-            lat_min (float): float representing the minimum latitude of the region where building altitude is considered.
-            lat_max (float): float representing the maximum latitude of the region where building altitude is considered.
-            divisions (integer): integer representing the number of horizontal and vertical airspace divisions.
-            building_dict (dict): dictionary with information about buildings
+        lon_min (float): minimum longitude of the region where building altitude is considered.
+        lon_max (float): maximum longitude of the region where building altitude is considered.
+        lat_min (float): minimum latitude of the region where building altitude is considered.
+        lat_max (float): maximum latitude of the region where building altitude is considered.
+        divisions (integer): number of horizontal and vertical airspace divisions.
+        building_dict (dict): information about buildings
 
     Returns:
-            sectors (DataFrame): dataframe with the sector information
-            building_dict: dictionary with information about buildings
+        sectors (DataFrame): sector information
+        building_dict: information about buildings
     """
     print( 'Assigning altitude to sectors...' )
     sectors = defSectors( lon_min, lon_max, lat_min, lat_max, divisions )
