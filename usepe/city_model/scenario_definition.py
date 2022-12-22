@@ -1747,17 +1747,3 @@ def createFlightPlansFromCSV( default_path, path_csv, strategic_deconfliction, G
 
 if __name__ == '__main__':
     pass
-    # config = configparser.ConfigParser()
-    # config_path = "C:/workspace3/bluesky/nommon/city_model/settings.cfg"
-    # config.read( config_path )
-    # """
-    # # Drawing buildings
-    # time = '00:00:00.00'
-    # scenario_path = r'C:\workspace3\bluesky\nommon\city_model\scenario_buildings.scn'
-    # scenario_file = open( scenario_path, 'w' )
-    # drawBuildings( config, scenario_file, time )
-    # scenario_file.close()
-    # """
-    # createAllDroneScenario( 100 )
-    #
-    # print( 'Finish' )
