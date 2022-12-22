@@ -66,30 +66,6 @@ def printRoute( G, route ):
     fig, ax = ox.plot_graph_route( G, route, node_size=0 )
     return fig, ax
 
-# def getRouteTimes( route ):
-#     '''
-#     Given a route (as a list of nodes), it returns the time for passing at each waypoint
-#     The speed considered is the maximum speed of the edges
-#     '''
-#     index = 0
-#     route_times = []
-#     for point in route:
-#         if index == 0:
-#             point_prev = point
-#             route_times.append( 0.0 )
-#             index += 1
-#         else:
-#             route_times.append( route_times[-1] + G.edges[ point_prev, point, 0 ]['travel_time'] )
-#             # route_times.append( G.edges[ point_prev, point, 0 ]['travel_time'] ) # Sequential
-#             point_prev = point
-#             index += 1
-#
-#     return dict( zip( route, route_times ) )
-#
-# def checkIfConflict( past_routes, past_takeoff_times, new_route, new_takeoff_time ):
-#     for old_route in past_routes:
-#         pass
-#     return None
 
 if __name__ == '__main__':
     pass
